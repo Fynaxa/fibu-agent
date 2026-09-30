@@ -1,0 +1,22 @@
+Alle Rechte vorbehalten.
+
+Copyright (c) 2026 Konstantin Konradi (Fynaxa)
+
+Dieser Quelltext ist einsehbar, damit Arbeitsweise und Qualität beurteilt werden
+können. Er ist nicht quelloffen: Es wird keine Erlaubnis erteilt, ihn zu nutzen,
+zu kopieren, zu verändern, zu verbreiten oder abgeleitete Werke daraus zu
+erstellen.
+
+Warum keine offene Lizenz: Das System ist als Produkt für Steuerkanzleien
+entworfen. Die Unterlagen in docs/legal/ (Verfahrensdokumentation, AVV,
+Löschkonzept) sind auf diesen Einsatz zugeschnitten und dürfen nicht ohne
+Prüfung in fremden Zusammenhängen verwendet werden. Wer den Code oder die
+Unterlagen für einen eigenen Zweck nutzen möchte, fragt: info@fynaxa.de
+
+---
+
+All rights reserved. This source is published so that engineering approach and
+quality can be assessed. It is not open source: no permission is granted to use,
+copy, modify or distribute it. The legal documents in docs/legal/ are tailored to
+one deployment scenario and must not be reused without review. To use it, ask:
+info@fynaxa.de

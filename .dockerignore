@@ -1,0 +1,12 @@
+.venv
+__pycache__
+*.pyc
+.env
+service_account.json
+.git
+.pytest_cache
+data/
+fibu_agent.db
+*.db
+.tmp/*
+!.tmp/.gitkeep
