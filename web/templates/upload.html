@@ -37,7 +37,7 @@
         </div>
         <div id="file-names" style="display:none; color:var(--mint); font-size:0.85rem; font-weight:500;"></div>
       </label>
-      <input type="file" name="belege" id="belege" multiple accept=".pdf,.png,.jpg,.jpeg,.tiff,.tif">
+      <input type="file" name="belege" id="belege" class="sr-only" multiple accept=".pdf,.png,.jpg,.jpeg,.tiff,.tif">
     </div>
 
     <button type="submit" class="btn btn-primary">
@@ -69,14 +69,14 @@ input.addEventListener('change', function() {
     fileNames.textContent = input.files.length + ' Datei(en): ' + names;
     dropLabel.style.display = 'none';
     fileNames.style.display = 'block';
-    zone.style.borderColor = 'rgba(45,212,168,0.5)';
+    zone.style.borderColor = 'rgba(248,96,48,0.5)';
   }
 });
 
 zone.addEventListener('dragover', function(e) {
   e.preventDefault();
-  zone.style.borderColor = 'rgba(45,212,168,0.5)';
-  zone.style.background = 'rgba(45,212,168,0.06)';
+  zone.style.borderColor = 'rgba(248,96,48,0.5)';
+  zone.style.background = 'rgba(248,96,48,0.06)';
 });
 zone.addEventListener('dragleave', function() {
   zone.style.borderColor = '';

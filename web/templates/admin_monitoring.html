@@ -1,9 +1,9 @@
 {% extends "base.html" %}
-{% block title %}Monitoring – FiBu-Agent{% endblock %}
+{% block title %}Systemstatus – FiBu-Agent{% endblock %}
 {% block content %}
 
 <div class="page-header">
-  <h1 class="page-title font-display">System-Monitoring</h1>
+  <h1 class="page-title font-display">Systemstatus</h1>
   <p class="page-subtitle">Health-Checks, API-Kosten und Systemzustand</p>
 </div>
 
@@ -13,12 +13,12 @@
     <div class="stat-label">Systemstatus</div>
   </div>
   <div class="stat-card {{ 'green' if not daily.budget_exceeded else 'red' }}">
-    <div class="stat-number" style="font-size:1.6rem;">{{ "%.2f"|format(daily.total_eur) }} €</div>
-    <div class="stat-label">API-Kosten heute (Limit: {{ "%.2f"|format(daily.budget_eur) }} €)</div>
+    <div class="stat-number" style="font-size:1.6rem;">{{ "%.2f"|format(daily.total_eur)|replace('.', ',') }} €</div>
+    <div class="stat-label">Kosten heute (Limit {{ "%.2f"|format(daily.budget_eur)|replace('.', ',') }} €)</div>
   </div>
   <div class="stat-card {{ 'green' if not monthly.budget_exceeded else 'red' }}">
-    <div class="stat-number" style="font-size:1.6rem;">{{ "%.2f"|format(monthly.total_eur) }} €</div>
-    <div class="stat-label">API-Kosten Monat (Limit: {{ "%.2f"|format(monthly.budget_eur) }} €)</div>
+    <div class="stat-number" style="font-size:1.6rem;">{{ "%.2f"|format(monthly.total_eur)|replace('.', ',') }} €</div>
+    <div class="stat-label">Kosten Monat (Limit {{ "%.2f"|format(monthly.budget_eur)|replace('.', ',') }} €)</div>
   </div>
   <div class="stat-card blue">
     <div class="stat-number">{{ daily.calls }}</div>
@@ -51,9 +51,11 @@
             {% endif %}
           </td>
           <td class="mono" style="font-size:0.77rem; color:var(--ink-dimmer);">
+            <div style="max-width:52ch; word-break:break-word;">
             {% for k, v in check.items() if k != 'status' %}
             {{ k }}: {{ v }}<br>
             {% endfor %}
+            </div>
           </td>
         </tr>
         {% endfor %}
@@ -90,7 +92,7 @@
   <h2 class="section-title">Auto-Scheduler</h2>
   <div style="display:flex; flex-wrap:wrap; gap:2rem; font-size:0.875rem;">
     <div>
-      <div style="font-size:0.75rem; font-weight:600; color:var(--ink-dimmer); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:0.3rem;">Status</div>
+      <div style="font-size:0.8rem; font-weight:500; color:var(--ink-dimmer); margin-bottom:0.3rem;">Status</div>
       {% if scheduler.running %}
       <span class="badge exportiert">Aktiv</span>
       {% elif scheduler.active %}
@@ -100,15 +102,15 @@
       {% endif %}
     </div>
     <div>
-      <div style="font-size:0.75rem; font-weight:600; color:var(--ink-dimmer); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:0.3rem;">Tägliche Uhrzeit</div>
+      <div style="font-size:0.8rem; font-weight:500; color:var(--ink-dimmer); margin-bottom:0.3rem;">Tägliche Uhrzeit</div>
       <span class="mono" style="color:var(--ink);">{{ scheduler.time }}</span>
     </div>
     <div>
-      <div style="font-size:0.75rem; font-weight:600; color:var(--ink-dimmer); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:0.3rem;">Nächster Run</div>
+      <div style="font-size:0.8rem; font-weight:500; color:var(--ink-dimmer); margin-bottom:0.3rem;">Nächster Run</div>
       <span style="color:var(--ink);">{{ scheduler.next_run }}</span>
     </div>
     <div>
-      <div style="font-size:0.75rem; font-weight:600; color:var(--ink-dimmer); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:0.3rem;">Letzter Run</div>
+      <div style="font-size:0.8rem; font-weight:500; color:var(--ink-dimmer); margin-bottom:0.3rem;">Letzter Run</div>
       <span style="color:var(--ink-dim);">{{ scheduler.last_run }}</span>
     </div>
   </div>

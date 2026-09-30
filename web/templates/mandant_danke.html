@@ -3,58 +3,36 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Vielen Dank – FiBu-Agent</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <title>Antwort eingegangen</title>
+  <meta name="robots" content="noindex">
+  <link rel="stylesheet" href="/static/fonts/fonts.css">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      background: #0A0A0F;
-      color: rgba(255,255,255,0.92);
-      font-family: 'Inter', system-ui, sans-serif;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 2rem 1rem;
+    :root {
+      --white: #FFFFFF; --parchment: #F5F5F7; --hairline: #E0E0E0; --chip: #D2D2D7;
+      --ink: #1D1D1F; --ink-2: #3A3A3C; --grey: #6E6E73; --grey-2: #86868B;
+      --glut: #F86030; --glut-text: #BD4512; --glut-tint: rgba(248,96,48,0.10); --glut-ring: rgba(248,96,48,0.32);
+      --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+      --font-mono: ui-monospace, "SF Mono", "IBM Plex Mono", Menlo, Consolas, monospace;
     }
-    .card {
-      background: #111118;
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 20px;
-      padding: 3rem 2.5rem;
-      width: min(480px, 100%);
-      text-align: center;
-      box-shadow: 0 25px 60px rgba(0,0,0,0.5);
-    }
-    .check {
-      width: 56px; height: 56px;
-      background: rgba(62,207,109,0.12);
-      border: 1.5px solid rgba(62,207,109,0.3);
-      border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1.5rem;
-      color: #3ECF6D;
-      margin: 0 auto 1.5rem;
-    }
-    h1 { font-size: 1.4rem; font-weight: 700; margin-bottom: 0.6rem; }
-    p { font-size: 0.88rem; color: rgba(255,255,255,0.55); line-height: 1.65; }
-    .logo {
-      margin-top: 2rem;
-      font-size: 0.72rem;
-      font-weight: 700;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: rgba(255,107,53,0.5);
-    }
+    body { background: var(--parchment); color: var(--ink); font-family: var(--font); font-size: 15px; line-height: 1.47; letter-spacing: -0.008em; min-height: 100vh; display: flex; align-items: flex-start; justify-content: center; padding: 3rem 1rem; -webkit-font-smoothing: antialiased; }
+    .card { background: var(--white); border-radius: 18px; padding: 32px 36px; width: min(480px, 100%); }
+    .check { display: inline-block; font-size: 13px; font-weight: 600; color: var(--glut-text); background: var(--glut-tint); border-radius: 980px; padding: 6px 14px; margin-bottom: 20px; }
+    h1 { font-weight: 600; font-size: 28px; letter-spacing: -0.022em; line-height: 1.15; margin-bottom: 8px; }
+    p { color: var(--grey); font-size: 15px; line-height: 1.5; }
+    .logo { display: flex; align-items: center; gap: 10px; margin-top: 28px; padding-top: 16px; border-top: 1px solid var(--hairline); }
+    .logo img { width: 22px; height: 22px; border-radius: 6px; display: block; }
+    .logo-name { font-weight: 600; font-size: 14px; }
+    .logo-sub { font-size: 13px; color: var(--grey); }
+    @media (max-width: 560px) { body { padding: 16px; } .card { padding: 22px 18px; border-radius: 14px; } }
   </style>
 </head>
 <body>
 <div class="card">
-  <div class="check">✓</div>
-  <h1>Vielen Dank!</h1>
-  <p>Ihre Antwort wurde erfolgreich übermittelt.<br>Ihr Steuerberater wurde informiert und kann die Buchung nun weiterverarbeiten.</p>
-  <div class="logo">FiBu-Agent · Fynaxa</div>
+  <div class="check">Antwort eingegangen</div>
+  <h1>Vielen Dank.</h1>
+  <p>Ihre Antwort liegt jetzt bei Ihrer Steuerkanzlei und wird bei der Buchung des Belegs berücksichtigt. Sie können dieses Fenster schließen.</p>
+  <div class="logo"><img src="/static/icon-192x192.png?v=4" alt=""><span class="logo-name">FiBu-Agent</span><span class="logo-sub">von Fynaxa</span></div>
 </div>
 </body>
 </html>

@@ -1,9 +1,9 @@
 {% extends "base.html" %}
-{% block title %}Debitorenbuchhaltung – FiBu-Agent{% endblock %}
+{% block title %}Debitoren – FiBu-Agent{% endblock %}
 {% block content %}
 
 <div class="page-header">
-  <h1 class="page-title">Debitorenbuchhaltung</h1>
+  <h1 class="page-title">Debitoren</h1>
   <p class="page-subtitle">Ausgangsrechnungen + offene Forderungen + Mahnwesen</p>
 </div>
 
@@ -74,7 +74,7 @@
           <span class="badge badge-green">Fristgerecht</span>
           {% endif %}
         </td>
-        <td style="font-weight:700;color:var(--amber);">{{ "%.2f"|format(r.betrag_brutto) }} €</td>
+        <td style="font-weight:700;color:var(--amber);">{{ "%.2f"|format(r.betrag_brutto)|replace('.', ',') }} €</td>
         <td>
           <form method="post" action="{{ url_for('debitor_bezahlt', rechnung_id=r.rechnung_id) }}" style="display:inline-flex;gap:0.5rem;">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -165,7 +165,7 @@
         <td style="font-weight:600;">{{ r.debitor_name }}</td>
         <td class="mono">{{ r.rechnungsnummer or "–" }}</td>
         <td class="mono">{{ r.rechnungsdatum[:10] }}</td>
-        <td style="font-weight:600;">{{ "%.2f"|format(r.betrag_brutto) }} €</td>
+        <td style="font-weight:600;">{{ "%.2f"|format(r.betrag_brutto)|replace('.', ',') }} €</td>
         <td>
           {% if r.status == 'bezahlt' %}<span class="badge badge-green">Bezahlt</span>
           {% elif r.status == 'storniert' %}<span class="badge badge-red">Storniert</span>

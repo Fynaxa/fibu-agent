@@ -23,7 +23,7 @@
                class="form-input"
                autocomplete="off"
                autofocus
-               style="padding-left:3rem; border-radius:14px 0 0 14px; font-size:1rem; height:54px; border-right:none;">
+               style="padding-left:3rem; border-radius:12px 0 0 14px; font-size:1rem; height:54px; border-right:none;">
       </div>
       <button type="submit" class="btn btn-primary"
               style="border-radius:0 14px 14px 0; height:54px; padding:0 2rem; font-size:0.9rem; box-shadow:var(--shadow-cta);">
@@ -47,13 +47,13 @@
   <div style="display:flex; flex-direction:column; gap:0.6rem;">
     {% for b in ergebnisse %}
     <div class="surface surface-sm"
-         style="display:grid; grid-template-columns:12px 1fr auto; gap:1rem; align-items:center; padding:0.9rem 1.25rem; border-radius:14px; transition:border-color 0.18s, transform 0.18s var(--spring);"
-         onmouseover="this.style.borderColor='rgba(255,107,53,0.3)';this.style.transform='translateY(-1px)'"
+         style="display:grid; grid-template-columns:12px 1fr auto; gap:1rem; align-items:center; padding:0.9rem 1.25rem; border-radius:12px; transition:border-color 0.18s, transform 0.18s var(--spring);"
+         onmouseover="this.style.borderColor='rgba(248,96,48,0.3)';this.style.transform='translateY(-1px)'"
          onmouseout="this.style.borderColor='var(--black-line)';this.style.transform=''">
 
       <div style="width:10px; height:10px; border-radius:50%; flex-shrink:0;
         background:{% if b.status == 'exportiert' %}var(--green){% elif b.status == 'rueckfrage' %}var(--amber){% elif b.status == 'fehler' %}var(--red){% else %}var(--ink-dimmer){% endif %};
-        box-shadow:0 0 0 3px {% if b.status == 'exportiert' %}rgba(62,207,109,0.15){% elif b.status == 'rueckfrage' %}rgba(255,181,71,0.15){% elif b.status == 'fehler' %}rgba(255,77,77,0.15){% else %}transparent{% endif %};">
+        box-shadow:0 0 0 3px {% if b.status == 'exportiert' %}rgba(248,96,48,0.15){% elif b.status == 'rueckfrage' %}rgba(248,96,48,0.15){% elif b.status == 'fehler' %}rgba(215,0,21,0.15){% else %}transparent{% endif %};">
       </div>
 
       <div>
@@ -82,7 +82,7 @@
 
       <div style="text-align:right; flex-shrink:0;">
         <div style="font-weight:700; font-size:0.97rem; color:var(--ink); font-variant-numeric:tabular-nums; margin-bottom:0.45rem; white-space:nowrap;">
-          {{ "%.2f"|format(b.bruttobetrag or 0) }} €
+          {{ "%.2f"|format(b.bruttobetrag or 0)|replace('.', ',') }} €
         </div>
         <div style="display:flex; gap:0.35rem; justify-content:flex-end;">
           {% if b.status == 'rueckfrage' %}
@@ -118,7 +118,7 @@
     ('Datum', '2026-01, 15.03.2026', 'Nach Belegdatum oder Monat filtern')
   ] %}
   <div class="surface surface-sm" style="text-align:center; padding:1.35rem 1rem;">
-    <div style="font-size:0.68rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--orange); margin-bottom:0.45rem;">{{ label }}</div>
+    <div style="font-size:0.68rem; font-weight:700; letter-spacing:0; color:var(--orange); margin-bottom:0.45rem;">{{ label }}</div>
     <div class="mono" style="font-size:0.77rem; color:var(--ink-soft); margin-bottom:0.4rem;">{{ examples }}</div>
     <div style="font-size:0.77rem; color:var(--ink-dimmer);">{{ desc }}</div>
   </div>

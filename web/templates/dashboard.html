@@ -1,123 +1,105 @@
 {% extends "base.html" %}
-{% block title %}Dashboard – FiBu-Agent{% endblock %}
+{% block title %}Übersicht – FiBu-Agent{% endblock %}
+{% block head %}
+<style>
+  .lage { background: var(--white); border-radius: var(--r-card); padding: 28px 28px 6px; margin-bottom: 16px; }
+  .lage-satz { font-size: 34px; font-weight: 600; letter-spacing: -0.025em; line-height: 1.15; max-width: 28ch; }
+  .lage-satz .n-note, .lage-zahlen .n-note { color: var(--glut-text); }
+  .lage-satz .n-pruef, .lage-zahlen .n-pruef { color: var(--rot); }
+  .lage-zahlen { display: grid; grid-template-columns: repeat(4, 1fr); column-gap: 24px; margin-top: 24px; border-top: 1px solid var(--divider); }
+  .lage-zahlen > div { padding: 16px 0 18px; }
+  .lage-zahlen .z { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .lage-zahlen .l { font-size: 13px; color: var(--grey); margin-top: 2px; }
+  .run-form { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+  .run-form .form-group { flex: 1; min-width: 240px; margin-bottom: 0; }
+  .run-status { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; font-size: 14px; }
+  .ablauf-list { list-style: none; display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+  .ablauf-list li { display: flex; gap: 12px; font-size: 14px; color: var(--grey); line-height: 1.45; }
+  .ablauf-n { flex-shrink: 0; width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--parchment); font-size: 12px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .ablauf-list strong { display: block; color: var(--ink); font-weight: 600; }
+  @media (max-width: 900px) { .ablauf-list { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 720px) {
+    .lage { padding: 22px 18px 4px; }
+    .lage-satz { font-size: 26px; }
+    .lage-zahlen { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 560px) { .ablauf-list { grid-template-columns: 1fr; } }
+</style>
+{% endblock %}
 {% block content %}
 
 <div class="page-header">
-  <h1 class="page-title font-display">Dashboard</h1>
-  <p class="page-subtitle">Übersicht aller Belege und laufenden Prozesse</p>
-</div>
-
-{% if current_user and current_user.role == 'admin' %}
-<div class="surface" style="border-color:rgba(255,107,53,0.18); background:rgba(255,107,53,0.03); margin-bottom:1.25rem; padding:0.85rem 1.1rem;">
-  <div style="display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap;">
-    <div>
-      <span style="font-size:0.68rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:rgba(255,107,53,0.6);">Admin · Demo-Reset</span>
-      <p style="font-size:0.8rem; color:var(--ink-dim); margin:0.2rem 0 0;">Löscht DEMO-Belege aus DB und legt 6 frische Rechnungen in die Inbox — für Live-Demos.</p>
-    </div>
-    <form method="POST" action="{{ url_for('admin_demo_reset') }}"
-          onsubmit="return confirm('DEMO-Account zurücksetzen? Alle DEMO-Buchungen werden gelöscht.')">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <button type="submit" class="btn btn-ghost btn-sm"
-              style="color:var(--orange); border-color:rgba(255,107,53,0.3); white-space:nowrap;">
-        ↺ Demo zurücksetzen
-      </button>
-    </form>
+  <div>
+    <h1 class="page-title font-display">Übersicht</h1>
+    <p class="page-subtitle">Alle Gesellschaften, Stand jetzt.</p>
   </div>
-</div>
-{% endif %}
-
-<div class="surface" style="border:1px solid rgba(255,107,53,0.25); background:rgba(255,107,53,0.04); margin-bottom:1.25rem;">
-  <div style="display:flex; gap:1.25rem; align-items:flex-start; flex-wrap:wrap;">
-    <div style="font-size:2rem; line-height:1; padding-top:0.1rem;">▶</div>
-    <div style="flex:1; min-width:220px;">
-      <div style="font-size:0.7rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--orange); margin-bottom:0.35rem;">So funktioniert der FiBu-Agent</div>
-      <div style="font-size:0.95rem; font-weight:600; color:var(--ink); margin-bottom:0.6rem;">
-        {% if inbox_count > 0 %}{{ inbox_count }} Beleg{{ 'e' if inbox_count != 1 else '' }} bereit — Pipeline jetzt starten{% else %}Belege hochladen und Pipeline starten{% endif %}
-      </div>
-      <ol style="font-size:0.82rem; color:var(--ink-soft); line-height:2; padding-left:1.1rem; margin:0;">
-        <li>Belege hochladen (PDF, PNG, JPG) → Gesellschaft zuweisen</li>
-        <li>Gesellschaft wählen → <strong style="color:var(--ink);">Pipeline starten</strong> — KI kontiert automatisch nach SKR03/SKR04</li>
-        <li>Unsichere Fälle erscheinen als <strong style="color:var(--ink);">Rückfragen</strong> zur manuellen Prüfung — jede Korrektur verbessert das Modell</li>
-        <li>DATEV-Export herunterladen — direkt importierbar</li>
-      </ol>
-    </div>
-    {% if current_user and current_user.role == 'admin' %}
-    <div style="display:flex; flex-direction:column; gap:0.5rem; min-width:160px; align-self:center;">
-      <a href="{{ url_for('euer') }}" class="btn btn-ghost btn-sm" style="text-align:center;">EÜR →</a>
-      <a href="{{ url_for('multi_entity') }}" class="btn btn-ghost btn-sm" style="text-align:center;">Multi-Entity →</a>
-      <a href="{{ url_for('bankabgleich') }}" class="btn btn-ghost btn-sm" style="text-align:center;">Bankabgleich →</a>
-    </div>
-    {% endif %}
+  <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+  <a href="{{ url_for('upload') }}" class="btn btn-primary">Belege hochladen</a>
+  {% if current_user and current_user.role == 'admin' %}
+  <form method="POST" action="{{ url_for('admin_demo_reset') }}"
+        onsubmit="return confirm('Demo-Mandant zurücksetzen? Alle DEMO-Buchungen werden gelöscht.')">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="btn btn-ghost" title="Löscht die DEMO-Belege und legt sechs frische Rechnungen in den Eingang">Demo zurücksetzen</button>
+  </form>
+  {% endif %}
   </div>
 </div>
 
-<div class="stats-grid">
-  <div class="stat-card green">
-    <div class="stat-number">{{ exportiert }}</div>
-    <div class="stat-label">Exportiert</div>
+{% set rq = rueckfragen|length %}{% set fe = fehler|int %}
+<section class="lage" aria-label="Lage heute">
+  <p class="lage-satz">
+    {%- if rq == 0 and fe == 0 -%}
+      Nichts offen. {{ total }} Beleg{{ 'e' if total != 1 else '' }}, {{ exportiert }} exportiert.
+    {%- else -%}
+      {%- if rq > 0 %}<span class="n-note">{{ rq }}</span> Rückfrage{{ 'n warten' if rq != 1 else ' wartet' }}{% endif -%}
+      {%- if rq > 0 and fe > 0 %}, {% endif -%}
+      {%- if fe > 0 %}<span class="n-pruef">{{ fe }}</span> Beleg{{ 'e' if fe != 1 else '' }} mit Fehler{% endif -%}.
+    {%- endif -%}
+  </p>
+  <div class="lage-zahlen">
+    <div><div class="z">{{ total }}</div><div class="l">Belege gesamt</div></div>
+    <div><div class="z">{{ exportiert }}</div><div class="l">Exportiert</div></div>
+    <div><div class="z{% if rq > 0 %} n-note{% endif %}">{{ rq }}</div><div class="l">Rückfragen offen</div></div>
+    <div><div class="z{% if fe > 0 %} n-pruef{% endif %}">{{ fe }}</div><div class="l">Fehler</div></div>
   </div>
-  <div class="stat-card amber" style="{% if rueckfragen|length > 0 %}border-color:rgba(255,181,71,0.3);{% endif %}">
-    <div class="stat-number">{{ rueckfragen|length }}</div>
-    <div class="stat-label">Rückfragen offen</div>
-  </div>
-  <div class="stat-card red">
-    <div class="stat-number">{{ fehler }}</div>
-    <div class="stat-label">Fehler</div>
-  </div>
-  <div class="stat-card blue">
-    <div class="stat-number">{{ total }}</div>
-    <div class="stat-label">Belege gesamt</div>
-  </div>
-</div>
+</section>
 
-{# ── AHA-MOMENT: Rückfragen prominently first ────────────────────────── #}
 {% if rueckfragen %}
-<div class="surface accent-strip a2" style="border-color:rgba(255,181,71,0.3); background:rgba(255,181,71,0.03); margin-bottom:1.5rem;">
-  <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:1.25rem; flex-wrap:wrap;">
-    <div style="display:flex; align-items:center; gap:0.5rem; flex:1;">
-      <span style="display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; background:rgba(255,181,71,0.15); border-radius:50%; color:#fbbf24; font-size:0.85rem; flex-shrink:0;">⚠</span>
-      <h2 class="section-title" style="margin:0; color:#fde68a;">{{ rueckfragen|length }} offene Rückfrage{{ 'n' if rueckfragen|length != 1 else '' }} — KI bittet um Ihre Einschätzung</h2>
-    </div>
-    <a href="{{ url_for('rueckfragen') }}" class="btn btn-ghost btn-sm" style="color:#fde68a; border-color:rgba(255,181,71,0.3);">Alle anzeigen →</a>
+<div class="surface">
+  <div class="surface-head">
+    <h2 class="section-title">{{ rueckfragen|length }} offene Rückfrage{{ 'n' if rueckfragen|length != 1 else '' }}</h2>
+    <a href="{{ url_for('rueckfragen') }}" class="btn btn-ghost btn-sm">Alle anzeigen</a>
   </div>
-
-  <div style="display:flex; flex-direction:column; gap:0.6rem;">
+  <div class="journal">
     {% for b in rueckfragen[:4] %}
-    <div style="display:grid; grid-template-columns:1fr auto; gap:1rem; align-items:center; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:12px; padding:0.85rem 1rem; transition:border-color 0.18s;" onmouseover="this.style.borderColor='rgba(255,181,71,0.2)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.06)'">
-      <div>
-        <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:0.35rem; flex-wrap:wrap;">
-          <span style="font-weight:600; color:var(--ink); font-size:0.9rem;">{{ b.get('lieferant', '–') }}</span>
-          <span style="font-size:0.8rem; color:var(--ink-dimmer);">{{ b.get('belegdatum', '') }}</span>
-          <span style="font-weight:700; color:#fde68a; font-variant-numeric:tabular-nums; font-size:0.88rem;">{{ "%.2f"|format(b.get('bruttobetrag', 0)) }} €</span>
-        </div>
-        {% if b.get('rueckfrage_grund') %}
-        <div style="font-size:0.8rem; color:rgba(253,230,138,0.7); background:rgba(255,181,71,0.06); border-left:2px solid rgba(255,181,71,0.4); padding:0.3rem 0.6rem; border-radius:0 6px 6px 0; line-height:1.45;">
-          {{ b.get('rueckfrage_grund') }}
-        </div>
-        {% endif %}
-      </div>
-      <div style="display:flex; gap:0.35rem; flex-shrink:0;">
+    <div class="journal-row">
+      <span class="journal-vendor">{{ b.get('lieferant') or 'Lieferant unbekannt' }}</span>
+      <span class="mono journal-date">{{ b.get('belegdatum', '') }}</span>
+      <span class="mono journal-amount">{{ "%.2f"|format(b.get('bruttobetrag', 0))|replace('.', ',') }} €</span>
+      <div class="journal-note">{{ b.get('rueckfrage_grund') or 'Ohne Begründung abgelegt' }}</div>
+      <div class="journal-actions">
         <a href="{{ url_for('beleg_detail', beleg_id=b.get('beleg_id', '')) }}" class="btn btn-primary btn-sm">Prüfen</a>
         <a href="{{ url_for('audit_detail', beleg_id=b.get('beleg_id', '')) }}" class="btn btn-ghost btn-sm">Audit</a>
       </div>
     </div>
     {% endfor %}
-    {% if rueckfragen|length > 4 %}
-    <div style="text-align:center; padding:0.5rem;">
-      <a href="{{ url_for('rueckfragen') }}" style="color:#fde68a; text-decoration:none; font-size:0.85rem; font-weight:600;">
-        + {{ rueckfragen|length - 4 }} weitere Rückfragen →
-      </a>
-    </div>
-    {% endif %}
   </div>
+  {% if rueckfragen|length > 4 %}
+  <p class="journal-more"><a href="{{ url_for('rueckfragen') }}">{{ rueckfragen|length - 4 }} weitere Rückfragen</a></p>
+  {% endif %}
 </div>
 {% endif %}
 
-<div class="surface accent-strip">
-  <h2 class="section-title">Pipeline starten</h2>
-  <form method="POST" action="{{ url_for('run_pipeline') }}" style="display:flex; gap:0.75rem; align-items:flex-end; flex-wrap:wrap;" id="run-form">
+<div class="surface">
+  <div class="surface-head">
+    <h2 class="section-title">Pipeline starten</h2>
+    <span class="text-dimmer" style="font-size:0.85rem;">
+      {% if inbox_count > 0 %}<span class="mono">{{ inbox_count }}</span> Beleg{{ 'e' if inbox_count != 1 else '' }} im Eingang{% else %}Eingang leer{% endif %}
+    </span>
+  </div>
+  <form method="POST" action="{{ url_for('run_pipeline') }}" class="run-form" id="run-form">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <div class="form-group" style="flex:1; min-width:200px;">
+    <div class="form-group">
       <label class="form-label" for="mandant_run">Gesellschaft</label>
       <select name="mandant_id" id="mandant_run" class="form-select">
         <option value="">Alle Gesellschaften</option>
@@ -127,38 +109,85 @@
       </select>
     </div>
     <button type="submit" class="btn btn-primary" id="run-btn">
-      <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M3.5 2.5l9 5-9 5V2.5z" fill="currentColor"/></svg>
+      <svg viewBox="0 0 15 15" fill="none" aria-hidden="true"><path d="M3.5 2.5l9 5-9 5V2.5z" fill="currentColor"/></svg>
       Pipeline starten
     </button>
   </form>
+  <p class="form-hint" style="margin-top:0.85rem;">Liest die Belege im Eingang, kontiert nach Regelwerk und Sprachmodell und legt Unsicheres als Rückfrage ab. Je Lauf entsteht ein Buchungsstapel im DATEV-Format.</p>
 </div>
 
 <div id="pipeline-status" class="surface" style="display:none;">
-  <h2 class="section-title">Laufende Pipeline</h2>
-  <div style="display:flex; gap:1.5rem; align-items:center; margin-bottom:1rem; flex-wrap:wrap;">
-    <div style="font-size:0.875rem;"><strong id="ps-progress" style="color:var(--orange);">0/0</strong> <span style="color:var(--ink-dimmer);">Belege</span></div>
-    <div style="flex:1; min-width:120px;">
-      <div class="progress-track">
-        <div id="ps-bar" class="progress-fill" style="width:0%;"></div>
-      </div>
-    </div>
+  <div class="surface-head">
+    <h2 class="section-title">Laufende Pipeline</h2>
     <span id="ps-status" class="badge neu">laufend</span>
-    <span id="ps-speed" style="font-size:0.78rem; color:var(--ink-dimmer);"></span>
   </div>
-  <div id="ps-current" style="font-size:0.825rem; color:var(--ink-dimmer); margin-bottom:0.5rem;"></div>
-  <div id="ps-log" class="mono" style="font-size:0.75rem; max-height:160px; overflow-y:auto; color:var(--ink-dimmer); background:rgba(10,10,15,0.5); border-radius:8px; padding:0.75rem; white-space:pre;"></div>
+  <div class="run-status">
+    <div><strong id="ps-progress" class="mono">0/0</strong> <span class="text-dimmer">Belege</span></div>
+    <div class="progress-track" style="flex:1; min-width:120px;">
+      <div id="ps-bar" class="progress-fill" style="width:0%;"></div>
+    </div>
+    <span id="ps-speed" class="mono text-dimmer" style="font-size:0.78rem;"></span>
+  </div>
+  <div id="ps-current" class="text-dimmer" style="font-size:0.825rem; margin-bottom:0.5rem;"></div>
+  <pre id="ps-log" class="log-box"></pre>
 </div>
 
+<div class="surface">
+  <h2 class="section-title">Gesellschaften</h2>
+  {% if mandanten %}
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Gesellschaft</th>
+          <th>Kennung</th>
+          <th>Kontenrahmen</th>
+          <th>Notizen</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in mandanten %}
+        <tr>
+          <td><strong>{{ m.name }}</strong></td>
+          <td class="mono">{{ m.id }}</td>
+          <td><span class="badge blue">{{ m.get('kontenrahmen', 'SKR03') }}</span></td>
+          <td class="text-dim" style="max-width:300px; font-size:0.85rem;">{{ m.get('notizen') or '' }}</td>
+          <td class="td-right"><a href="{{ url_for('mandant_detail', mandant_id=m.id) }}" class="btn btn-ghost btn-sm">Details</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    Noch keine Gesellschaft angelegt.
+    {% if current_user and current_user.role == 'admin' %}<a href="{{ url_for('admin_mandanten') }}">Gesellschaft anlegen</a>{% endif %}
+  </div>
+  {% endif %}
+</div>
+
+<div class="surface surface-sm">
+  <ol class="ablauf-list">
+    <li><span class="mono ablauf-n">1</span><div><strong>Belege hochladen</strong>PDF, PNG oder JPG, einer Gesellschaft zugewiesen.</div></li>
+    <li><span class="mono ablauf-n">2</span><div><strong>Pipeline starten</strong>Regelwerk zuerst, dann Sprachmodell; Kontenrahmen SKR03 oder SKR04.</div></li>
+    <li><span class="mono ablauf-n">3</span><div><strong>Rückfragen klären</strong>Unsicheres wartet auf Ihre Entscheidung; Bestätigungen fließen ins Regelwerk zurück.</div></li>
+    <li><span class="mono ablauf-n">4</span><div><strong>Buchungsstapel abholen</strong>DATEV-Format, Import und Buchung in der Kanzlei.</div></li>
+  </ol>
+</div>
+
+{% endblock %}
+{% block scripts %}
 <script>
-(function() {
-  let polling = null;
-  let startTime = null;
+(function () {
+  var polling = null;
+  var startTime = null;
   function pollStatus() {
     fetch('/api/pipeline-status')
-      .then(r => r.json())
-      .then(data => {
-        const active = data.active || [];
-        const box = document.getElementById('pipeline-status');
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        var active = data.active || [];
+        var box = document.getElementById('pipeline-status');
         if (active.length === 0) {
           box.style.display = 'none';
           if (polling) { clearInterval(polling); polling = null; }
@@ -166,30 +195,27 @@
           return;
         }
         box.style.display = 'block';
-        const run = active[0];
-        const pct = run.total > 0 ? Math.round(run.verarbeitet / run.total * 100) : 0;
+        var run = active[0];
+        var pct = run.total > 0 ? Math.round(run.verarbeitet / run.total * 100) : 0;
         document.getElementById('ps-progress').textContent = run.verarbeitet + '/' + run.total;
         document.getElementById('ps-bar').style.width = pct + '%';
-        const st = document.getElementById('ps-status');
+        var st = document.getElementById('ps-status');
         st.textContent = run.status;
         st.className = 'badge ' + (run.status === 'fertig' ? 'exportiert' : run.status === 'fehler' ? 'fehler' : 'neu');
         document.getElementById('ps-current').textContent = run.aktueller_beleg ? 'Aktuell: ' + run.aktueller_beleg : '';
         if (startTime && run.verarbeitet > 0) {
-          const elapsed = (Date.now() - startTime) / 1000;
-          const perBeleg = elapsed / run.verarbeitet;
-          document.getElementById('ps-speed').textContent = perBeleg < 60
-            ? '⚡ ' + perBeleg.toFixed(1) + 's / Beleg'
-            : '';
+          var perBeleg = ((Date.now() - startTime) / 1000) / run.verarbeitet;
+          document.getElementById('ps-speed').textContent = perBeleg < 60 ? perBeleg.toFixed(1).replace('.', ',') + ' s je Beleg' : '';
         }
-        const log = (run.log || []).slice(-10).map(e => e.zeit + '  ' + e.beleg + '  →  ' + e.status).join('\n');
+        var log = (run.log || []).slice(-10).map(function (e) { return e.zeit + '  ' + e.beleg + '  ->  ' + e.status; }).join('\n');
         document.getElementById('ps-log').textContent = log;
-      }).catch(() => {});
+      }).catch(function () {});
   }
-  const form = document.getElementById('run-form');
+  var form = document.getElementById('run-form');
   if (form) {
-    form.addEventListener('submit', function() {
+    form.addEventListener('submit', function () {
       startTime = Date.now();
-      setTimeout(function() {
+      setTimeout(function () {
         if (!polling) polling = setInterval(pollStatus, 2000);
         pollStatus();
       }, 1200);
@@ -198,56 +224,4 @@
   pollStatus();
 })();
 </script>
-
-<div class="surface">
-  <h2 class="section-title">Gesellschaften</h2>
-  {% if mandanten %}
-  {% set mandant_colors = ['rgba(255,107,53,', 'rgba(77,159,255,', 'rgba(62,207,109,', 'rgba(255,181,71,', 'rgba(167,139,250,', 'rgba(244,114,182,'] %}
-  <div class="tbl-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th>Gesellschaft</th>
-          <th>Kontenrahmen</th>
-          <th>Notizen</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for m in mandanten %}
-        {% set ci = loop.index0 % 6 %}
-        {% set col_base = mandant_colors[ci] %}
-        <tr>
-          <td>
-            <div style="display:flex; align-items:center; gap:0.65rem;">
-              <div style="width:8px; height:8px; border-radius:50%; flex-shrink:0;
-                background:{{ col_base }}1); box-shadow:0 0 0 3px {{ col_base }}0.15);"></div>
-              <div>
-                <div style="font-weight:600; color:var(--ink);">{{ m.name }}</div>
-                <div class="mono" style="font-size:0.72rem; color:var(--ink-dimmer);">{{ m.id }}</div>
-              </div>
-            </div>
-          </td>
-          <td>
-            <span class="badge" style="background:{{ col_base }}0.08); color:{{ col_base }}0.9); border:1px solid {{ col_base }}0.2);">
-              {{ m.get('kontenrahmen', 'SKR03') }}
-            </span>
-          </td>
-          <td style="max-width:250px; font-size:0.8rem;">{{ m.get('notizen', '–') }}</td>
-          <td><a href="{{ url_for('mandant_detail', mandant_id=m.id) }}" class="btn btn-ghost btn-sm">Details →</a></td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  {% else %}
-  <div class="empty-state">
-    Keine Gesellschaften konfiguriert.
-    {% if current_user and current_user.role == 'admin' %}
-    <br><a href="{{ url_for('admin_mandanten') }}" style="color:var(--orange); text-decoration:none; font-weight:600;">Gesellschaften anlegen →</a>
-    {% endif %}
-  </div>
-  {% endif %}
-</div>
-
 {% endblock %}

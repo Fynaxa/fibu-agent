@@ -18,8 +18,8 @@
   {% for s, label in [('', 'Alle'), ('exportiert', 'Exportiert'), ('validiert', 'Freigegeben'), ('rueckfrage', 'Rückfragen'), ('fehler', 'Fehler')] %}
   <a href="{{ url_for('meine_belege', status=s) }}"
      style="display:inline-flex; align-items:center; padding:0.3rem 0.85rem; border-radius:99px; font-size:0.78rem; font-weight:600; text-decoration:none; transition:all 0.15s;
-       {% if status_filter == s %}background:rgba(255,107,53,0.15); color:var(--orange); border:1px solid rgba(255,107,53,0.35);
-       {% else %}background:rgba(255,255,255,0.04); color:var(--ink-dim); border:1px solid rgba(255,255,255,0.08);{% endif %}">
+       {% if status_filter == s %}background:rgba(248,96,48,0.15); color:var(--orange); border:1px solid rgba(248,96,48,0.35);
+       {% else %}background:rgba(0,0,0,0.04); color:var(--ink-dim); border:1px solid rgba(0,0,0,0.08);{% endif %}">
     {{ label }}
     {% if s %}
       <span style="margin-left:0.4rem; font-size:0.7rem; opacity:0.7;">{{ belege|selectattr('status','equalto',s)|list|length if status_filter == '' else belege|length }}</span>
@@ -48,11 +48,11 @@
         <tr style="cursor:pointer;" onclick="window.location='{{ url_for('beleg_detail', beleg_id=b.beleg_id) }}'">
           <td>
             <div style="font-weight:600; color:var(--ink);">{{ b.lieferant or '–' }}</div>
-            <div style="font-size:0.72rem; color:var(--ink-dimmer); font-family:'SF Mono',monospace; margin-top:0.1rem;">{{ b.dateiname or '' }}</div>
+            <div style="font-size:0.72rem; color:var(--ink-dimmer); font-family:var(--font-mono); margin-top:0.1rem;">{{ b.dateiname or '' }}</div>
           </td>
           <td style="font-size:0.85rem; white-space:nowrap;">{{ b.belegdatum or '–' }}</td>
           <td class="td-right" style="font-variant-numeric:tabular-nums; font-weight:700; color:var(--ink); white-space:nowrap;">
-            {{ "%.2f"|format(b.bruttobetrag or 0) }} €
+            {{ "%.2f"|format(b.bruttobetrag or 0)|replace('.', ',') }} €
           </td>
           <td>
             {% if b.soll_konto %}
@@ -89,7 +89,6 @@
 {% else %}
 <div class="surface">
   <div class="empty-state" style="padding:3rem; text-align:center;">
-    <div style="font-size:2.5rem; margin-bottom:1rem; opacity:0.3;">📄</div>
     <div style="font-weight:600; color:var(--ink); margin-bottom:0.5rem;">Noch keine Belege verarbeitet</div>
     <div style="font-size:0.85rem; color:var(--ink-dim); margin-bottom:1.5rem;">Lade eine Rechnung hoch und starte die Pipeline — die KI kontiert sie automatisch.</div>
     <a href="{{ url_for('upload') }}" class="btn btn-primary">Ersten Beleg hochladen</a>

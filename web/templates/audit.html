@@ -16,8 +16,8 @@
   <h2 class="section-title">Hash-Chain Verifizierung</h2>
   {% if verification.get('valid') %}
   <div style="display:flex; align-items:center; gap:0.75rem;">
-    <div style="width:32px; height:32px; border-radius:50%; background:rgba(45,212,168,0.15); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#2dd4a8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <div style="width:32px; height:32px; border-radius:50%; background:rgba(248,96,48,0.15); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#F86030" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </div>
     <div>
       <p style="font-weight:600; color:var(--emerald);">Integritätsprüfung bestanden</p>
@@ -28,13 +28,13 @@
   <p style="color:var(--ink-dimmer); font-size:0.875rem;">Kein Audit-Log für diesen Beleg vorhanden.</p>
   {% else %}
   <div style="display:flex; align-items:center; gap:0.75rem;">
-    <div style="width:32px; height:32px; border-radius:50%; background:rgba(248,113,113,0.12); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 8v5m0 3v1M12 2a10 10 0 100 20A10 10 0 0012 2z" stroke="#f87171" stroke-width="2" stroke-linecap="round"/></svg>
+    <div style="width:32px; height:32px; border-radius:50%; background:rgba(215,0,21,0.12); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 8v5m0 3v1M12 2a10 10 0 100 20A10 10 0 0012 2z" stroke="#D70015" stroke-width="2" stroke-linecap="round"/></svg>
     </div>
     <div>
-      <p style="font-weight:600; color:#fca5a5;">Integritätsfehler erkannt</p>
+      <p style="font-weight:600; color:#D70015;">Integritätsfehler erkannt</p>
       {% if verification.get('fehler') %}
-      <ul style="font-size:0.82rem; color:#fca5a5; padding-left:1.2rem; margin-top:0.4rem; line-height:1.7;">
+      <ul style="font-size:0.82rem; color:#D70015; padding-left:1.2rem; margin-top:0.4rem; line-height:1.7;">
         {% for f in verification.fehler %}<li>{{ f }}</li>{% endfor %}
       </ul>
       {% endif %}

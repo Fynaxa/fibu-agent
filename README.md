@@ -14,12 +14,26 @@ trotzdem seit Wochen als Docker-Dienst hinter nginx unter
 
 |  |  |
 |---|---|
-| Umfang | 10.100 Zeilen Python in 43 Dateien: 28 Werkzeugmodule, Flask-Oberfläche mit 46 Routen und 25 Vorlagen |
+| Umfang | 10.300 Zeilen Python in 43 Dateien: 27 Werkzeugmodule, Flask-Oberfläche mit 52 Routen und 25 Vorlagen |
 | Tests | **31**, laufen offline ohne API-Zugang |
 | Kontierung | 4 Stufen: bestätigte Lieferanten aus dem Gedächtnis (ab zehn Bestätigungen ohne Rückfrage), dann 93 Regeln SKR03 bzw. 42 Regeln SKR04 (längstes Muster gewinnt), dann Sprachmodell, dann Rückfrage ab Konfidenz unter 0,7 |
 | Betrieb | Docker Compose mit nginx, Healthcheck, `restart: unless-stopped`, Tagesbudget für API-Kosten |
 | Orchestrierung | 14 n8n-Workflows mit 128 Knoten, als Export im Repository |
 | Abhängigkeiten | Flask, pdfplumber, anthropic, cryptography, bcrypt, flask-limiter, apscheduler |
+
+![Übersicht: Lagezeile, offene Rückfragen, Pipeline-Start](docs/screenshots/uebersicht.png)
+
+## Oberfläche
+
+Weiß trägt, Schwarz spricht, Orange zeigt: weiße Karten auf hellem Grau, eine
+Schrift (die Systemschrift, auf Apple-Geräten SF Pro), Kontrast über Größe und
+Gewicht statt über Farbe. Schwarz ist Text und primäre Aktion, das Fynaxa-Orange
+ist der einzige Akzent (aktiver Reiter, Rückfragen, Fokus), Rot gibt es nur für
+Fehler. Die Übersicht beginnt mit einem Satz, der den Tag zusammenfasst („3
+Rückfragen warten, 1 Beleg mit Fehler."). Beim Seitenaufruf geht keine Anfrage an
+Google; die einzige Webschrift (IBM Plex Mono für Kennungen) liegt im Repository.
+Weitere Ansichten: [Anmeldung](docs/screenshots/anmeldung.png),
+[Rückfragen mit Sammelbestätigung](docs/screenshots/rueckfragen.png).
 
 ## Was hier nicht liegt
 

@@ -1,12 +1,12 @@
 {
-  "name": "Fynaxa FiBu",
-  "short_name": "Fynaxa FiBu",
-  "description": "KI-gestützte Finanzbuchhaltung für Steuerberater",
+  "name": "FiBu-Agent",
+  "short_name": "FiBu-Agent",
+  "description": "Vom Belegeingang zum DATEV-Buchungsstapel, vorbereitend für die Steuerkanzlei",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "background_color": "#0A0A0F",
-  "theme_color": "#FF6B35",
+  "background_color": "#F5F5F7",
+  "theme_color": "#FFFFFF",
   "lang": "de",
   "icons": [
     { "src": "/static/icon-72x72.png",   "sizes": "72x72",   "type": "image/png" },

@@ -8,11 +8,10 @@
 </div>
 
 {# Tutorial-Banner #}
-<div class="surface" style="border:1px solid rgba(255,107,53,0.2); background:rgba(255,107,53,0.04); margin-bottom:1.5rem;">
+<div class="surface" style="border:0; margin-bottom:1.5rem;">
   <div style="display:flex; gap:1.25rem; align-items:flex-start; flex-wrap:wrap;">
-    <div style="font-size:1.75rem; line-height:1; padding-top:0.15rem; flex-shrink:0;">📊</div>
     <div style="flex:1; min-width:240px;">
-      <div style="font-size:0.7rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--orange); margin-bottom:0.35rem;">So funktioniert die EÜR</div>
+      <div style="font-size:0.8rem; font-weight:600; letter-spacing:0; color:var(--grey); margin-bottom:0.35rem;">So funktioniert die EÜR</div>
       <div style="font-size:0.9rem; font-weight:600; color:var(--ink); margin-bottom:0.5rem;">Vollautomatisch — kein manuelles Übertragen. Alle exportierten Belege fließen direkt ein.</div>
       <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:0.5rem 1.5rem;">
         <div style="font-size:0.8rem; color:var(--ink-soft); display:flex; gap:0.45rem;">
@@ -84,8 +83,8 @@
   <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.25rem; flex-wrap:wrap; gap:0.5rem;">
     <h2 class="section-title" style="margin:0;">Übersicht {{ aktuelles_jahr }}</h2>
     <div style="display:flex; gap:1.25rem; font-size:0.78rem;">
-      <span style="display:flex; align-items:center; gap:0.35rem;"><span style="width:10px; height:10px; border-radius:2px; background:rgba(62,207,109,0.7); display:inline-block;"></span> Einnahmen</span>
-      <span style="display:flex; align-items:center; gap:0.35rem;"><span style="width:10px; height:10px; border-radius:2px; background:rgba(255,77,77,0.7); display:inline-block;"></span> Ausgaben</span>
+      <span style="display:flex; align-items:center; gap:0.35rem;"><span style="width:10px; height:10px; border-radius:6px; background:rgba(248,96,48,0.7); display:inline-block;"></span> Einnahmen</span>
+      <span style="display:flex; align-items:center; gap:0.35rem;"><span style="width:10px; height:10px; border-radius:6px; background:rgba(215,0,21,0.7); display:inline-block;"></span> Ausgaben</span>
     </div>
   </div>
   <div style="position:relative; height:200px;">
@@ -105,14 +104,14 @@
         {% for z in euer.einnahmen %}
         <tr>
           <td>{{ z.kategorie }}</td>
-          <td style="text-align:right;font-weight:600;color:var(--green);">{{ "%.2f"|format(z.betrag) }} €</td>
+          <td style="text-align:right;font-weight:600;color:var(--green);">{{ "%.2f"|format(z.betrag)|replace('.', ',') }} €</td>
         </tr>
         {% endfor %}
       </tbody>
       <tfoot>
         <tr style="border-top:2px solid var(--black-line);">
           <td style="font-weight:700;">Gesamt</td>
-          <td style="text-align:right;font-weight:800;color:var(--green);">{{ "%.2f"|format(euer.gesamt_einnahmen) }} €</td>
+          <td style="text-align:right;font-weight:800;color:var(--green);">{{ "%.2f"|format(euer.gesamt_einnahmen)|replace('.', ',') }} €</td>
         </tr>
       </tfoot>
     </table>
@@ -131,14 +130,14 @@
         {% for z in euer.ausgaben %}
         <tr>
           <td>{{ z.kategorie }}</td>
-          <td style="text-align:right;font-weight:600;color:var(--red);">{{ "%.2f"|format(z.betrag) }} €</td>
+          <td style="text-align:right;font-weight:600;color:var(--red);">{{ "%.2f"|format(z.betrag)|replace('.', ',') }} €</td>
         </tr>
         {% endfor %}
       </tbody>
       <tfoot>
         <tr style="border-top:2px solid var(--black-line);">
           <td style="font-weight:700;">Gesamt</td>
-          <td style="text-align:right;font-weight:800;color:var(--red);">{{ "%.2f"|format(euer.gesamt_ausgaben) }} €</td>
+          <td style="text-align:right;font-weight:800;color:var(--red);">{{ "%.2f"|format(euer.gesamt_ausgaben)|replace('.', ',') }} €</td>
         </tr>
       </tfoot>
     </table>
@@ -154,7 +153,7 @@
     <h2 class="section-title" style="margin:0;">Textausgabe (für Steuerberater)</h2>
     <button onclick="navigator.clipboard.writeText(document.getElementById('euer-text').textContent).then(()=>{ this.textContent='✓ Kopiert'; setTimeout(()=>this.textContent='Kopieren',2000) })" class="btn btn-ghost btn-sm">Kopieren</button>
   </div>
-  <pre id="euer-text" style="font-family:'SF Mono','Fira Code',monospace;font-size:0.8rem;color:var(--ink-mute);line-height:1.7;white-space:pre-wrap;">{{ euer_text }}</pre>
+  <pre id="euer-text" style="font-family:var(--font-mono);font-size:0.8rem;color:var(--ink-mute);line-height:1.7;white-space:pre-wrap;">{{ euer_text }}</pre>
 </div>
 
 {% endblock %}
@@ -183,8 +182,8 @@
   var einnahmenVals = allCats.map(function(c) { return einnahmenMap[c] || 0; });
   var ausgabenVals = allCats.map(function(c) { return ausgabenMap[c] || 0; });
 
-  Chart.defaults.color = 'rgba(248,249,252,0.45)';
-  Chart.defaults.font.family = "'Switzer', 'Inter', sans-serif";
+  Chart.defaults.color = 'rgba(0,0,0,0.45)';
+  Chart.defaults.font.family = "'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif";
 
   new Chart(ctx, {
     type: 'bar',
@@ -194,16 +193,16 @@
         {
           label: 'Einnahmen',
           data: einnahmenVals,
-          backgroundColor: 'rgba(62,207,109,0.55)',
-          borderColor: 'rgba(62,207,109,0.9)',
+          backgroundColor: 'rgba(248,96,48,0.55)',
+          borderColor: 'rgba(248,96,48,0.9)',
           borderWidth: 1,
           borderRadius: 6,
         },
         {
           label: 'Ausgaben',
           data: ausgabenVals,
-          backgroundColor: 'rgba(255,77,77,0.45)',
-          borderColor: 'rgba(255,77,77,0.8)',
+          backgroundColor: 'rgba(215,0,21,0.45)',
+          borderColor: 'rgba(215,0,21,0.8)',
           borderWidth: 1,
           borderRadius: 6,
         }
@@ -215,8 +214,8 @@
       plugins: {
         legend: { display: false },
         tooltip: {
-          backgroundColor: 'rgba(10,10,15,0.95)',
-          borderColor: 'rgba(255,255,255,0.1)',
+          backgroundColor: 'rgba(0,0,0,0.95)',
+          borderColor: 'rgba(0,0,0,0.1)',
           borderWidth: 1,
           callbacks: {
             label: function(ctx) {
@@ -227,13 +226,13 @@
       },
       scales: {
         x: {
-          grid: { color: 'rgba(255,255,255,0.04)' },
-          border: { color: 'rgba(255,255,255,0.08)' },
+          grid: { color: 'rgba(0,0,0,0.04)' },
+          border: { color: 'rgba(0,0,0,0.08)' },
           ticks: { font: { size: 11 }, maxRotation: 30 }
         },
         y: {
-          grid: { color: 'rgba(255,255,255,0.04)' },
-          border: { color: 'rgba(255,255,255,0.08)' },
+          grid: { color: 'rgba(0,0,0,0.04)' },
+          border: { color: 'rgba(0,0,0,0.08)' },
           ticks: {
             callback: function(v) { return v.toLocaleString('de-DE') + ' €'; },
             font: { size: 11 }

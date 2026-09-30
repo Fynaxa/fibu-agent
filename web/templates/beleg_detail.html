@@ -16,27 +16,27 @@
 {# Status-Badge #}
 <div style="margin-bottom:1.25rem; display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
   {% if beleg.status == 'rueckfrage' %}
-  <span style="display:inline-flex;align-items:center;gap:0.4rem;background:rgba(255,181,71,0.12);color:#fde68a;border:1px solid rgba(251,191,36,0.35);border-radius:99px;padding:0.35rem 1rem;font-size:0.85rem;font-weight:600;box-shadow:0 0 0 3px rgba(255,181,71,0.06);">
-    ⚠ Rückfrage — manuelle Prüfung erforderlich
+  <span style="display:inline-flex;align-items:center;gap:0.4rem;background:rgba(248,96,48,0.12);color:#BD4512;border:1px solid rgba(248,96,48,0.35);border-radius:99px;padding:0.35rem 1rem;font-size:0.85rem;font-weight:600;box-shadow:0 0 0 3px rgba(248,96,48,0.06);">
+    Rückfrage: manuelle Prüfung erforderlich
   </span>
   {% elif beleg.status == 'validiert' %}
-  <span style="display:inline-flex;align-items:center;gap:0.4rem;background:rgba(62,207,109,0.1);color:var(--green);border:1px solid rgba(62,207,109,0.3);border-radius:99px;padding:0.35rem 1rem;font-size:0.85rem;font-weight:600;">
+  <span style="display:inline-flex;align-items:center;gap:0.4rem;background:rgba(248,96,48,0.1);color:var(--green);border:0;border-radius:99px;padding:0.35rem 1rem;font-size:0.85rem;font-weight:600;">
     ✓ Validiert
   </span>
   {% elif beleg.status == 'exportiert' %}
-  <span style="display:inline-flex;align-items:center;gap:0.4rem;background:rgba(62,207,109,0.08);color:var(--green);border:1px solid rgba(62,207,109,0.2);border-radius:99px;padding:0.35rem 1rem;font-size:0.85rem;font-weight:600;">
+  <span style="display:inline-flex;align-items:center;gap:0.4rem;background:var(--parchment);color:var(--green);border:0;border-radius:99px;padding:0.35rem 1rem;font-size:0.85rem;font-weight:600;">
     ✓ Exportiert (DATEV)
   </span>
   {% else %}
-  <span style="display:inline-flex;align-items:center;gap:0.4rem;background:rgba(255,77,77,0.1);color:#fca5a5;border:1px solid rgba(255,77,77,0.2);border-radius:99px;padding:0.35rem 1rem;font-size:0.85rem;font-weight:600;">
-    {{ beleg.status }}
+  <span style="display:inline-flex;align-items:center;gap:0.4rem;background:rgba(215,0,21,0.1);color:#D70015;border:1px solid rgba(215,0,21,0.2);border-radius:99px;padding:0.35rem 1rem;font-size:0.85rem;font-weight:600;">
+    {{ {'rueckfrage': 'Rückfrage', 'exportiert': 'Exportiert', 'fehler': 'Fehler', 'neu': 'Neu', 'kontiert': 'Kontiert', 'validiert': 'Validiert'}.get(beleg.status, beleg.status) }}
   </span>
   {% endif %}
 
   {# Feature 3: Lernschleife-Badge #}
   {% if vendor_count and vendor_count > 1 %}
   <span title="Der KI-Kontierungsvorschlag basiert auf {{ vendor_count }} bestätigten Buchungen für diesen Lieferanten."
-        style="display:inline-flex;align-items:center;gap:0.35rem;background:rgba(77,159,255,0.1);color:#93c5fd;border:1px solid rgba(77,159,255,0.25);border-radius:99px;padding:0.3rem 0.85rem;font-size:0.78rem;font-weight:600;cursor:default;">
+        style="display:inline-flex;align-items:center;gap:0.35rem;background:rgba(248,96,48,0.1);color:#BD4512;border:0;border-radius:99px;padding:0.3rem 0.85rem;font-size:0.78rem;font-weight:600;cursor:default;">
     <svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm0 4v4l3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
     Basierend auf {{ vendor_count }} Buchungen
   </span>
@@ -45,11 +45,10 @@
 
 {# KI-Begründung Banner #}
 {% if beleg.rueckfrage_grund %}
-<div style="background:rgba(255,181,71,0.07); border:1px solid rgba(255,181,71,0.3); border-radius:14px; padding:1.1rem 1.25rem; margin-bottom:1.5rem; display:flex; gap:0.9rem; align-items:flex-start;">
-  <div style="flex-shrink:0; width:32px; height:32px; background:rgba(255,181,71,0.15); border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fbbf24; font-size:0.85rem;">⚠</div>
+<div style="background:var(--parchment); border:0; border-radius:12px; padding:1.1rem 1.25rem; margin-bottom:1.5rem; display:flex; gap:0.9rem; align-items:flex-start;">
   <div style="flex:1;">
-    <div style="font-size:0.72rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:rgba(251,191,36,0.6); margin-bottom:0.3rem;">KI-Begründung</div>
-    <div style="font-size:0.92rem; color:#fde68a; font-weight:500; line-height:1.5;">{{ beleg.rueckfrage_grund }}</div>
+    <div style="font-size:0.72rem; font-weight:700; letter-spacing:0; color:rgba(189,69,18,0.6); margin-bottom:0.3rem;">KI-Begründung</div>
+    <div style="font-size:0.92rem; color:#BD4512; font-weight:500; line-height:1.5;">{{ beleg.rueckfrage_grund }}</div>
   </div>
 </div>
 {% endif %}
@@ -58,20 +57,20 @@
 <div style="display:grid; grid-template-columns:2fr 3fr; gap:1.25rem; margin-bottom:1.5rem; min-height:520px;">
 
   {# LEFT: PDF-Viewer #}
-  <div class="surface" style="padding:0; overflow:hidden; display:flex; flex-direction:column; border-radius:16px; position:relative;">
-    <div style="padding:0.85rem 1.1rem; border-bottom:1px solid rgba(255,255,255,0.06); display:flex; align-items:center; gap:0.5rem;">
+  <div class="surface" style="padding:0; overflow:hidden; display:flex; flex-direction:column; border-radius:12px; position:relative;">
+    <div style="padding:0.85rem 1.1rem; border-bottom:1px solid rgba(0,0,0,0.06); display:flex; align-items:center; gap:0.5rem;">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="color:var(--ink-dimmer);"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 2v6h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <span style="font-size:0.75rem; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; color:var(--ink-dimmer);">Original-Beleg</span>
-      <span style="margin-left:auto; font-size:0.72rem; color:var(--ink-dimmer); font-family:'SF Mono',monospace; word-break:break-all;">{{ beleg.dateiname or '–' }}</span>
+      <span style="font-size:0.75rem; font-weight:600; letter-spacing:0; color:var(--ink-dimmer);">Original-Beleg</span>
+      <span style="margin-left:auto; font-size:0.72rem; color:var(--ink-dimmer); font-family:var(--font-mono); word-break:break-all;">{{ beleg.dateiname or '–' }}</span>
       <a href="{{ url_for('beleg_pdf', beleg_id=beleg.beleg_id) }}" target="_blank"
-         style="flex-shrink:0; display:inline-flex; align-items:center; gap:0.3rem; padding:0.25rem 0.6rem; border-radius:6px; border:1px solid rgba(255,255,255,0.1); color:var(--ink-dimmer); font-size:0.72rem; font-weight:600; text-decoration:none; transition:all 0.15s;"
-         onmouseover="this.style.color='var(--ink)'; this.style.borderColor='rgba(255,255,255,0.25)'"
-         onmouseout="this.style.color='var(--ink-dimmer)'; this.style.borderColor='rgba(255,255,255,0.1)'">
+         style="flex-shrink:0; display:inline-flex; align-items:center; gap:0.3rem; padding:0.25rem 0.6rem; border-radius:6px; border:1px solid rgba(0,0,0,0.1); color:var(--ink-dimmer); font-size:0.72rem; font-weight:600; text-decoration:none; transition:all 0.15s;"
+         onmouseover="this.style.color='var(--ink)'; this.style.borderColor='rgba(0,0,0,0.25)'"
+         onmouseout="this.style.color='var(--ink-dimmer)'; this.style.borderColor='rgba(0,0,0,0.1)'">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M15 3h6v6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 14L21 3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
         Neuer Tab
       </a>
     </div>
-    <div style="flex:1; min-height:460px; background:rgba(0,0,0,0.25);" id="pdf-container">
+    <div style="flex:1; min-height:460px; background:rgba(0,0,0,0.05);" id="pdf-container">
       <iframe id="pdf-frame"
               src="{{ url_for('beleg_pdf', beleg_id=beleg.beleg_id) }}"
               style="width:100%; height:100%; min-height:460px; border:none; border-radius:0 0 16px 16px;"
@@ -96,11 +95,11 @@
       {% macro ampel(field_key) %}
         {% set k = feld_konfidenz.get(field_key, 0.7) %}
         {% if k >= 0.82 %}
-          <span title="Konfidenz hoch ({{ '%.0f'|format(k*100) }}%)" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 5px rgba(62,207,109,0.6);flex-shrink:0;margin-top:0.2rem;"></span>
+          <span title="Konfidenz hoch ({{ '%.0f'|format(k*100) }}%)" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 5px rgba(248,96,48,0.6);flex-shrink:0;margin-top:0.2rem;"></span>
         {% elif k >= 0.6 %}
-          <span title="Konfidenz mittel ({{ '%.0f'|format(k*100) }}%) — bitte prüfen" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#fbbf24;box-shadow:0 0 5px rgba(251,191,36,0.5);flex-shrink:0;margin-top:0.2rem;"></span>
+          <span title="Konfidenz mittel ({{ '%.0f'|format(k*100) }}%) — bitte prüfen" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#BD4512;box-shadow:0 0 5px rgba(248,96,48,0.5);flex-shrink:0;margin-top:0.2rem;"></span>
         {% else %}
-          <span title="Konfidenz niedrig ({{ '%.0f'|format(k*100) }}%) — manuelle Prüfung erforderlich" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#f87171;box-shadow:0 0 5px rgba(248,113,113,0.5);flex-shrink:0;margin-top:0.2rem;"></span>
+          <span title="Konfidenz niedrig ({{ '%.0f'|format(k*100) }}%) — manuelle Prüfung erforderlich" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#D70015;box-shadow:0 0 5px rgba(215,0,21,0.5);flex-shrink:0;margin-top:0.2rem;"></span>
         {% endif %}
       {% endmacro %}
 
@@ -121,16 +120,16 @@
         {{ ampel('bruttobetrag') }}
         <dt style="color:var(--ink-dim); white-space:nowrap;">Brutto</dt>
         <dd style="font-variant-numeric:tabular-nums; font-weight:700; color:var(--ink); font-size:1.05rem;">
-          {{ "%.2f"|format(beleg.bruttobetrag or 0) }} {{ beleg.waehrung or 'EUR' }}
+          {{ "%.2f"|format(beleg.bruttobetrag or 0)|replace('.', ',') }} {{ beleg.waehrung or 'EUR' }}
         </dd>
 
         {{ ampel('nettobetrag') }}
         <dt style="color:var(--ink-dim); white-space:nowrap;">Netto</dt>
-        <dd style="font-variant-numeric:tabular-nums;">{{ "%.2f"|format(beleg.nettobetrag or 0) }}</dd>
+        <dd style="font-variant-numeric:tabular-nums;">{{ "%.2f"|format(beleg.nettobetrag or 0)|replace('.', ',') }}</dd>
 
         {{ ampel('mwst_satz') }}
         <dt style="color:var(--ink-dim); white-space:nowrap;">MwSt</dt>
-        <dd style="font-variant-numeric:tabular-nums;">{{ "%.2f"|format(beleg.mwst_betrag or 0) }} ({{ beleg.mwst_satz or '–' }} %)</dd>
+        <dd style="font-variant-numeric:tabular-nums;">{{ "%.2f"|format(beleg.mwst_betrag or 0)|replace('.', ',') }} ({{ beleg.mwst_satz or '–' }} %)</dd>
 
         <span></span>
         <dt style="color:var(--ink-dim); white-space:nowrap;">Datei</dt>
@@ -139,21 +138,21 @@
 
       {# Gesamt-Konfidenz-Bar #}
       {% set conf = (beleg.ocr_konfidenz or 0) * 100 %}
-      <div style="border-top:1px solid rgba(255,255,255,0.06); padding-top:1rem;">
+      <div style="border-top:1px solid rgba(0,0,0,0.06); padding-top:1rem;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.45rem;">
           <div style="display:flex; align-items:center; gap:0.6rem;">
-            <span style="font-size:0.72rem; font-weight:700; letter-spacing:0.07em; text-transform:uppercase; color:var(--ink-dimmer);">OCR-Konfidenz gesamt</span>
+            <span style="font-size:0.72rem; font-weight:700; letter-spacing:0; color:var(--ink-dimmer);">OCR-Konfidenz gesamt</span>
             <span style="font-size:0.67rem; color:var(--ink-dimmer); opacity:0.7;">● grün = sicher &nbsp;● gelb = prüfen &nbsp;● rot = manuell</span>
           </div>
           <span style="font-weight:700; font-size:0.9rem;
-            color:{% if conf >= 80 %}var(--green){% elif conf >= 60 %}#fde68a{% else %}#fca5a5{% endif %};">
+            color:{% if conf >= 80 %}var(--green){% elif conf >= 60 %}#BD4512{% else %}#D70015{% endif %};">
             {{ "%.0f"|format(conf) }}%
           </span>
         </div>
-        <div style="background:rgba(255,255,255,0.06); border-radius:99px; height:7px; overflow:hidden;">
+        <div style="background:rgba(0,0,0,0.06); border-radius:99px; height:7px; overflow:hidden;">
           <div style="height:100%; border-radius:99px; width:{{ "%.0f"|format(conf) }}%; transition:width 0.8s var(--ease-out);
-            background:{% if conf >= 80 %}linear-gradient(90deg,#22c55e,var(--green)){% elif conf >= 60 %}linear-gradient(90deg,#d97706,#fbbf24){% else %}linear-gradient(90deg,#dc2626,#f87171){% endif %};
-            box-shadow:0 0 8px {% if conf >= 80 %}rgba(62,207,109,0.4){% elif conf >= 60 %}rgba(255,181,71,0.4){% else %}rgba(255,77,77,0.4){% endif %};">
+            background:{% if conf >= 80 %}linear-gradient(90deg,#F86030,var(--green)){% elif conf >= 60 %}linear-gradient(90deg,#BD4512,#BD4512){% else %}linear-gradient(90deg,#D70015,#D70015){% endif %};
+            box-shadow:0 0 8px {% if conf >= 80 %}rgba(248,96,48,0.4){% elif conf >= 60 %}rgba(248,96,48,0.4){% else %}rgba(215,0,21,0.4){% endif %};">
           </div>
         </div>
         <div style="font-size:0.73rem; color:var(--ink-dimmer); margin-top:0.35rem;">
@@ -165,14 +164,14 @@
     {# KI-Kontierungsvorschlag #}
     <div class="surface">
       <h2 class="section-title">KI-Kontierungsvorschlag</h2>
-      <div style="background:rgba(255,107,53,0.05); border:1px solid rgba(255,107,53,0.15); border-radius:12px; padding:1rem; margin-bottom:1.25rem;">
+      <div style="background:var(--parchment); border:0; border-radius:10px; padding:1rem; margin-bottom:1.25rem;">
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; margin-bottom:0.75rem;">
           <div>
-            <div style="font-size:0.68rem; text-transform:uppercase; letter-spacing:0.1em; color:var(--ink-dimmer); margin-bottom:0.2rem;">Soll-Konto</div>
+            <div style="font-size:0.68rem; letter-spacing:0; color:var(--ink-dimmer); margin-bottom:0.2rem;">Soll-Konto</div>
             <div class="mono" style="font-size:1.6rem; font-weight:800; color:var(--orange); line-height:1;">{{ beleg.soll_konto or '–' }}</div>
           </div>
           <div>
-            <div style="font-size:0.68rem; text-transform:uppercase; letter-spacing:0.1em; color:var(--ink-dimmer); margin-bottom:0.2rem;">Haben-Konto</div>
+            <div style="font-size:0.68rem; letter-spacing:0; color:var(--ink-dimmer); margin-bottom:0.2rem;">Haben-Konto</div>
             <div class="mono" style="font-size:1.6rem; font-weight:800; color:var(--ink-soft); line-height:1;">{{ beleg.haben_konto or '1200' }}</div>
           </div>
         </div>
@@ -193,8 +192,8 @@
         </div>
       </div>
       {% if beleg.buchungstext %}
-      <div style="font-size:0.82rem; color:var(--ink-dim); background:rgba(255,255,255,0.025); border-radius:8px; padding:0.6rem 0.8rem; border:1px solid rgba(255,255,255,0.05);">
-        <span style="color:var(--ink-dimmer); font-size:0.72rem; text-transform:uppercase; letter-spacing:0.07em;">Buchungstext</span><br>
+      <div style="font-size:0.82rem; color:var(--ink-dim); background:rgba(0,0,0,0.025); border-radius:10px; padding:0.6rem 0.8rem; border:1px solid rgba(0,0,0,0.05);">
+        <span style="color:var(--ink-dimmer); font-size:0.72rem; letter-spacing:0;">Buchungstext</span><br>
         {{ beleg.buchungstext }}
       </div>
       {% endif %}
@@ -205,19 +204,19 @@
 
 {# ── Feature 5: Mandanten-Rückfrage-Link ─────────────────────────── #}
 {% if beleg.status in ('rueckfrage', 'validiert') %}
-<div class="surface" style="margin-bottom:1rem; border-color:rgba(77,159,255,0.18);">
+<div class="surface" style="margin-bottom:1rem; border-color:rgba(248,96,48,0.18);">
   <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
     <div style="flex:1;">
       <h2 class="section-title" style="margin-bottom:0.2rem;">Mandanten-Rückfrage</h2>
       <p style="font-size:0.82rem; color:var(--ink-dim); margin:0;">Sende dem Mandanten einen Link — er kann antworten ohne Login.</p>
     </div>
     <button class="btn btn-ghost" onclick="toggleRQForm()" id="rq-toggle-btn"
-            style="border-color:rgba(77,159,255,0.3); color:#93c5fd; flex-shrink:0;">
+            style="border-color:rgba(248,96,48,0.3); color:#BD4512; flex-shrink:0;">
       + Rückfrage senden
     </button>
   </div>
 
-  <div id="rq-form-wrap" style="display:none; margin-top:1.1rem; border-top:1px solid rgba(255,255,255,0.06); padding-top:1.1rem;">
+  <div id="rq-form-wrap" style="display:none; margin-top:1.1rem; border-top:1px solid rgba(0,0,0,0.06); padding-top:1.1rem;">
     <div class="form-group" style="margin-bottom:0.75rem;">
       <label class="form-label" for="rq-frage">Frage an den Mandanten</label>
       <textarea id="rq-frage" rows="3" class="form-input" style="resize:vertical;"
@@ -225,14 +224,14 @@
     </div>
     <div style="display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap;">
       <button class="btn btn-primary" onclick="createRQToken()" id="rq-create-btn"
-              style="background:rgba(77,159,255,0.15); border-color:rgba(77,159,255,0.4); color:#93c5fd;">
+              style="background:rgba(248,96,48,0.15); border-color:rgba(248,96,48,0.4); color:#BD4512;">
         Link erstellen
       </button>
       <div id="rq-link-wrap" style="display:none; flex:1;">
         <div style="font-size:0.72rem; color:var(--ink-dimmer); margin-bottom:0.25rem;">Link für Mandanten (einmalig kopieren!):</div>
         <div style="display:flex; gap:0.5rem; align-items:center;">
           <input type="text" id="rq-link-output" readonly class="form-input"
-                 style="font-size:0.8rem; font-family:'SF Mono',monospace; background:rgba(0,0,0,0.3);">
+                 style="font-size:0.8rem; font-family:var(--font-mono); background:rgba(0,0,0,0.05);">
           <button class="btn btn-ghost btn-sm" onclick="copyRQLink()" style="flex-shrink:0;">Kopieren</button>
         </div>
       </div>
@@ -243,7 +242,7 @@
 
 {# ── Korrektur-Formular ───────────────────────────────────────────── #}
 {% if beleg.status in ('rueckfrage',) %}
-<div class="surface" style="margin-bottom:1rem; border-color:rgba(255,107,53,0.2);">
+<div class="surface" style="margin-bottom:1rem; border-color:rgba(248,96,48,0.2);">
   <h2 class="section-title">Manuelle Korrektur &amp; Freigabe</h2>
   <p style="font-size:0.85rem;color:var(--ink-dim);margin-bottom:1.5rem;">
     Prüfe die extrahierten Daten und passe das Konto wenn nötig an. Jede Korrektur fließt automatisch in den Lernalgorithmus ein.
@@ -299,7 +298,7 @@
         ✓ Genehmigen &amp; DATEV-freigeben
       </button>
       <button type="submit" class="btn btn-ghost"
-              style="color:#fca5a5;border-color:rgba(248,113,113,0.3);"
+              style="color:#D70015;border-color:rgba(215,0,21,0.3);"
               onclick="document.getElementById('form_action').value='reject'">
         ✗ Ablehnen
       </button>
@@ -314,8 +313,8 @@
   <h2 class="section-title">Verlauf</h2>
   <div style="display:flex;flex-direction:column;gap:0.5rem;">
     {% for event in history %}
-    <div style="display:flex;gap:1rem;align-items:flex-start;font-size:0.82rem;padding:0.5rem 0;border-bottom:1px solid rgba(255,255,255,0.04);">
-      <span style="color:var(--ink-dimmer);min-width:130px;flex-shrink:0;font-family:'SF Mono',monospace;">
+    <div style="display:flex;gap:1rem;align-items:flex-start;font-size:0.82rem;padding:0.5rem 0;border-bottom:1px solid rgba(0,0,0,0.04);">
+      <span style="color:var(--ink-dimmer);min-width:130px;flex-shrink:0;font-family:var(--font-mono);">
         {{ event.zeitstempel[:16] if event.zeitstempel else '–' }}
       </span>
       <span style="color:var(--orange);min-width:100px;flex-shrink:0;">{{ event.event_type }}</span>

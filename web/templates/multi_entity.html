@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Multi-Entity — FiBu-Agent{% endblock %}
+{% block title %}Alle Belege – FiBu-Agent{% endblock %}
 {% block content %}
 
 <style>
@@ -25,7 +25,7 @@
 </style>
 
 <div class="page-header">
-  <h1 class="page-title font-display">Multi-Entity Übersicht</h1>
+  <h1 class="page-title font-display">Alle Belege</h1>
   <p class="page-subtitle">Alle Belege aller Gesellschaften — eine Ansicht, ein Überblick</p>
 </div>
 
@@ -47,7 +47,7 @@
     <div class="stat-number">{{ fehler }}</div>
     <div class="stat-label">Fehler</div>
   </div>
-  <div class="stat-card" style="border-color:rgba(167,243,208,0.18);">
+  <div class="stat-card" style="border-color:rgba(248,96,48,0.18);">
     <div class="stat-number" style="color:var(--mint);">{{ mandanten|length }}</div>
     <div class="stat-label">Gesellschaften</div>
   </div>
@@ -61,15 +61,15 @@
     {% for ms in mandant_stats %}
     <a href="{{ url_for('mandant_detail', mandant_id=ms.id) }}"
        style="text-decoration:none; display:block;
-              background:rgba(10,31,26,0.5); border:1px solid rgba(167,243,208,0.12);
-              border-radius:14px; padding:1rem 1.1rem;
+              background:var(--sheet-deep); border:0;
+              border-radius:12px; padding:1rem 1.1rem;
               transition:border-color 0.2s, background 0.2s;"
-       onmouseover="this.style.borderColor='rgba(45,212,168,0.3)'; this.style.background='rgba(45,212,168,0.04)'"
-       onmouseout="this.style.borderColor='rgba(167,243,208,0.12)'; this.style.background='rgba(10,31,26,0.5)'">
-      <div style="font-weight:600; color:var(--ink); font-size:0.875rem; margin-bottom:0.5rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+       onmouseover="this.style.borderColor='rgba(248,96,48,0.3)'; this.style.background='#ECECF0'"
+       onmouseout="this.style.borderColor='rgba(248,96,48,0.12)'; this.style.background='var(--sheet-deep)'">
+      <div style="font-weight:600; color:var(--ink); font-size:0.875rem; margin-bottom:0.5rem; line-height:1.35;">
         {{ ms.name }}
       </div>
-      <div style="font-size:0.72rem; color:var(--ink-dimmer); margin-bottom:0.6rem; font-family:'SF Mono',ui-monospace,monospace;">{{ ms.id }}</div>
+      <div style="font-size:0.72rem; color:var(--ink-dimmer); margin-bottom:0.6rem; font-family:var(--font-mono);">{{ ms.id }}</div>
       <div style="display:flex; gap:0.4rem; flex-wrap:wrap;">
         <span class="badge exportiert">{{ ms.exportiert }} exportiert</span>
         {% if ms.rueckfragen > 0 %}<span class="badge rueckfrage">{{ ms.rueckfragen }} Rückfragen</span>{% endif %}
@@ -91,15 +91,15 @@
         <path d="m21 21-4.35-4.35" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
       </svg>
       <input type="text" id="search-input" placeholder="Lieferant, Beleg-ID, Konto …"
-             class="form-input" style="border-radius:8px; padding:0.45rem 0.75rem; font-size:0.825rem;">
+             class="form-input" style="border-radius:10px; padding:0.45rem 0.75rem; font-size:0.825rem;">
     </div>
-    <select id="filter-mandant" class="form-select" style="width:auto; min-width:160px; padding:0.45rem 0.75rem; font-size:0.825rem; border-radius:8px;">
+    <select id="filter-mandant" class="form-select" style="width:auto; min-width:160px; padding:0.45rem 0.75rem; font-size:0.825rem; border-radius:10px;">
       <option value="">Alle Gesellschaften</option>
       {% for m in mandanten %}
       <option value="{{ m.id }}">{{ m.name }}</option>
       {% endfor %}
     </select>
-    <select id="filter-status" class="form-select" style="width:auto; min-width:130px; padding:0.45rem 0.75rem; font-size:0.825rem; border-radius:8px;">
+    <select id="filter-status" class="form-select" style="width:auto; min-width:130px; padding:0.45rem 0.75rem; font-size:0.825rem; border-radius:10px;">
       <option value="">Alle Status</option>
       <option value="exportiert">Exportiert</option>
       <option value="rueckfrage">Rückfrage</option>
@@ -145,16 +145,16 @@
                onmouseout="this.style.textDecoration='none'">
               {{ b._mandant_name }}
             </a>
-            <div style="font-size:0.7rem; color:var(--ink-dimmer); font-family:'SF Mono',ui-monospace,monospace;">{{ b._mandant_id }}</div>
+            <div style="font-size:0.7rem; color:var(--ink-dimmer); font-family:var(--font-mono);">{{ b._mandant_id }}</div>
           </td>
           <td class="mono" style="font-size:0.77rem;">{{ b.get('beleg_id', '?')[:12] }}</td>
           <td style="font-weight:500; color:var(--ink);">{{ b.get('lieferant', '–') }}</td>
           <td style="font-size:0.82rem;">{{ b.get('belegdatum', '–') }}</td>
           <td class="td-right" style="font-variant-numeric:tabular-nums;">
-            {{ "%.2f"|format(b.get('bruttobetrag', 0)) }} €
+            {{ "%.2f"|format(b.get('bruttobetrag', 0))|replace('.', ',') }} €
           </td>
           <td class="mono" style="font-size:0.77rem; color:var(--ink-dim);">
-            {{ b.get('soll_konto', '?') }}/{{ b.get('haben_konto', '?') }}
+            {% if b.get('soll_konto') %}{{ b.get('soll_konto') }}/{{ b.get('haben_konto') or '–' }}{% else %}–{% endif %}
           </td>
           <td>
             {% if b.get('kontierung_methode') == 'llm' %}
@@ -164,7 +164,7 @@
             {% endif %}
           </td>
           <td>
-            <span class="badge {{ b.get('status', 'neu') }}">{{ b.get('status', 'neu') }}</span>
+            <span class="badge {{ b.get('status', 'neu') }}">{{ {'rueckfrage': 'Rückfrage', 'exportiert': 'Exportiert', 'fehler': 'Fehler', 'neu': 'Neu', 'kontiert': 'Kontiert', 'validiert': 'Validiert'}.get(b.get('status', 'neu'), b.get('status', 'neu')) }}</span>
           </td>
           <td>
             {% if b.get('status') in ('validiert', 'kontiert') and b.get('soll_konto') %}

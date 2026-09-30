@@ -1,9 +1,9 @@
 {% extends "base.html" %}
-{% block title %}Anlagenbuchhaltung – FiBu-Agent{% endblock %}
+{% block title %}Anlagevermögen – FiBu-Agent{% endblock %}
 {% block content %}
 
 <div class="page-header">
-  <h1 class="page-title">Anlagenbuchhaltung</h1>
+  <h1 class="page-title">Anlagevermögen</h1>
   <p class="page-subtitle">Asset-Registry + AfA-Berechnung</p>
 </div>
 
@@ -54,9 +54,9 @@
       {% for r in afa_bericht %}
       <tr>
         <td>{{ r.bezeichnung }}{% if r.gwg %} <span class="badge badge-amber">GWG</span>{% endif %}</td>
-        <td>{{ "%.2f"|format(r.anschaffungskosten) }} €</td>
+        <td>{{ "%.2f"|format(r.anschaffungskosten)|replace('.', ',') }} €</td>
         <td>{{ r.nutzungsdauer_jahre }} J</td>
-        <td style="font-weight:700;color:var(--orange);">{{ "%.2f"|format(r.afa_betrag_jahr) }} €</td>
+        <td style="font-weight:700;color:var(--orange);">{{ "%.2f"|format(r.afa_betrag_jahr)|replace('.', ',') }} €</td>
         <td class="mono">{{ r.soll_konto }} / {{ r.haben_konto }}</td>
       </tr>
       {% endfor %}
@@ -77,7 +77,7 @@
         <td>{{ a.bezeichnung }}{% if a.gwg %} <span class="badge badge-amber">GWG</span>{% endif %}</td>
         <td class="text-dim">{{ a.lieferant or "–" }}</td>
         <td class="mono">{{ a.anschaffungsdatum[:10] }}</td>
-        <td>{{ "%.2f"|format(a.anschaffungskosten) }} €</td>
+        <td>{{ "%.2f"|format(a.anschaffungskosten)|replace('.', ',') }} €</td>
         <td>{{ a.nutzungsdauer_jahre }} J</td>
         <td class="mono">{{ a.soll_konto }}</td>
         <td>

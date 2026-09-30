@@ -74,7 +74,7 @@
       <tr>
         <td class="mono">{{ tx.datum }}</td>
         <td style="font-weight:700;{% if tx.richtung == 'CREDIT' %}color:var(--green){% else %}color:var(--red){% endif %}">
-          {% if tx.richtung == 'DEBIT' %}–{% endif %}{{ "%.2f"|format(tx.betrag) }} {{ tx.waehrung }}
+          {% if tx.richtung == 'DEBIT' %}–{% endif %}{{ "%.2f"|format(tx.betrag)|replace('.', ',') }} {{ tx.waehrung }}
         </td>
         <td><span class="badge {% if tx.richtung == 'CREDIT' %}badge-green{% else %}badge-red{% endif %}">{{ tx.richtung }}</span></td>
         <td class="text-dim" style="max-width:300px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ tx.verwendungszweck or "–" }}</td>
@@ -98,7 +98,7 @@
       <tr>
         <td class="mono">{{ tx.datum }}</td>
         <td style="font-weight:600;{% if tx.richtung == 'CREDIT' %}color:var(--green){% else %}color:var(--red){% endif %}">
-          {% if tx.richtung == 'DEBIT' %}–{% endif %}{{ "%.2f"|format(tx.betrag) }} {{ tx.waehrung }}
+          {% if tx.richtung == 'DEBIT' %}–{% endif %}{{ "%.2f"|format(tx.betrag)|replace('.', ',') }} {{ tx.waehrung }}
         </td>
         <td class="text-dim" style="max-width:350px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ tx.verwendungszweck or "–" }}</td>
         <td>
@@ -113,22 +113,21 @@
   {# Feature explanation for empty state #}
   <div style="padding:0.5rem 0 1.5rem;">
     <div style="text-align:center; margin-bottom:2rem;">
-      <div style="width:56px; height:56px; background:rgba(255,107,53,0.08); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 0.85rem; font-size:1.5rem;">🏦</div>
       <p style="font-size:1rem; font-weight:600; color:var(--ink); margin-bottom:0.35rem;">Noch keine Transaktionen importiert</p>
       <p style="font-size:0.875rem; color:var(--ink-dimmer);">Importiere einen Kontoauszug links und starte dann den automatischen Abgleich.</p>
     </div>
 
     <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:1rem;">
-      <div style="background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.07); border-radius:14px; padding:1.1rem;">
-        <div style="font-size:0.7rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--orange); margin-bottom:0.45rem;">① MT940 / CAMT</div>
+      <div style="background:rgba(0,0,0,0.025); border:1px solid rgba(0,0,0,0.07); border-radius:12px; padding:1.1rem;">
+        <div style="font-size:0.8rem; font-weight:600; letter-spacing:0; color:var(--grey); margin-bottom:0.45rem;">① MT940 / CAMT</div>
         <div style="font-size:0.83rem; color:var(--ink-mute); line-height:1.55;">Kontoauszüge im MT940-Format (.sta) oder CAMT.053 (.xml) werden automatisch erkannt — direkt aus dem Online-Banking exportieren.</div>
       </div>
-      <div style="background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.07); border-radius:14px; padding:1.1rem;">
-        <div style="font-size:0.7rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--orange); margin-bottom:0.45rem;">② Automatischer Abgleich</div>
+      <div style="background:rgba(0,0,0,0.025); border:1px solid rgba(0,0,0,0.07); border-radius:12px; padding:1.1rem;">
+        <div style="font-size:0.8rem; font-weight:600; letter-spacing:0; color:var(--grey); margin-bottom:0.45rem;">② Automatischer Abgleich</div>
         <div style="font-size:0.83rem; color:var(--ink-mute); line-height:1.55;">Betrag, Rechnungsnummer und Lieferant werden automatisch verglichen — passt alles, wird der Beleg sofort zugeordnet.</div>
       </div>
-      <div style="background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.07); border-radius:14px; padding:1.1rem;">
-        <div style="font-size:0.7rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--orange); margin-bottom:0.45rem;">③ Lückenloser Nachweis</div>
+      <div style="background:rgba(0,0,0,0.025); border:1px solid rgba(0,0,0,0.07); border-radius:12px; padding:1.1rem;">
+        <div style="font-size:0.8rem; font-weight:600; letter-spacing:0; color:var(--grey); margin-bottom:0.45rem;">③ Lückenloser Nachweis</div>
         <div style="font-size:0.83rem; color:var(--ink-mute); line-height:1.55;">Jede abgeglichene Transaktion erhält einen Beleg-Link — der GoBD-konforme Nachweis ist vollständig und revisionssicher.</div>
       </div>
     </div>

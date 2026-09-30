@@ -63,8 +63,8 @@
     Belege (PDF, JPG, PNG) direkt an diese Adresse schicken — sie landen automatisch in der Inbox dieses Mandanten:
   </p>
   <div style="display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap; margin-bottom:0.75rem;">
-    <code style="background:var(--surface-alt,#181f2e); padding:0.4rem 0.9rem; border-radius:8px;
-                 font-size:0.92rem; color:var(--emerald); border:1px solid rgba(45,212,168,0.25);
+    <code style="background:var(--surface-alt,var(--sheet-deep)); padding:0.4rem 0.9rem; border-radius:10px;
+                 font-size:0.92rem; color:var(--emerald); border:0;
                  letter-spacing:0.02em; user-select:all;">{{ inbox_email }}</code>
     <button onclick="navigator.clipboard.writeText('{{ inbox_email }}').then(()=>{this.textContent='✓ Kopiert';setTimeout(()=>this.textContent='Kopieren',1800)})"
             class="btn btn-ghost btn-sm">Kopieren</button>
@@ -135,7 +135,7 @@
           <td class="mono" style="font-size:0.77rem;">{{ b.get('beleg_id', '?')[:12] }}</td>
           <td style="font-weight:500; color:var(--ink);">{{ b.get('lieferant', '–') }}</td>
           <td style="font-size:0.82rem;">{{ b.get('belegdatum', '–') }}</td>
-          <td class="td-right" style="font-variant-numeric:tabular-nums;">{{ "%.2f"|format(b.get('bruttobetrag', 0)) }} €</td>
+          <td class="td-right" style="font-variant-numeric:tabular-nums;">{{ "%.2f"|format(b.get('bruttobetrag', 0))|replace('.', ',') }} €</td>
           <td class="mono" style="font-size:0.77rem; color:var(--ink-dim);">{{ b.get('soll_konto', '?') }}/{{ b.get('haben_konto', '?') }}</td>
           <td>
             {% if b.get('kontierung_methode') == 'llm' %}
@@ -144,7 +144,7 @@
             <span class="badge exportiert">Regel</span>
             {% endif %}
           </td>
-          <td><span class="badge {{ b.get('status', 'neu') }}">{{ b.get('status', 'neu') }}</span></td>
+          <td><span class="badge {{ b.get('status', 'neu') }}">{{ {'rueckfrage': 'Rückfrage', 'exportiert': 'Exportiert', 'fehler': 'Fehler', 'neu': 'Neu', 'kontiert': 'Kontiert', 'validiert': 'Validiert'}.get(b.get('status', 'neu'), b.get('status', 'neu')) }}</span></td>
           <td><a href="{{ url_for('audit_detail', beleg_id=b.get('beleg_id', '')) }}" class="btn btn-ghost btn-sm">Audit</a></td>
         </tr>
         {% endfor %}
@@ -176,7 +176,7 @@ async function pollMail(btn) {
     const d = await r.json();
     if (d.error) {
       result.textContent = '✗ ' + d.error;
-      result.style.color = '#fca5a5';
+      result.style.color = '#D70015';
     } else {
       result.textContent = `✓ ${d.saved} Anhang/Anhänge gespeichert, ${d.emails_processed} E-Mail(s) geprüft`;
       result.style.color = 'var(--emerald)';
@@ -184,7 +184,7 @@ async function pollMail(btn) {
     }
   } catch(e) {
     result.textContent = '✗ Verbindungsfehler';
-    result.style.color = '#fca5a5';
+    result.style.color = '#D70015';
   } finally {
     btn.disabled = false;
     btn.textContent = 'E-Mails jetzt abholen';
@@ -202,7 +202,7 @@ async function validateDatev(filepath, btn) {
       btn.style.color = 'var(--emerald)';
     } else {
       btn.textContent = '✗ Fehler';
-      btn.style.color = '#fca5a5';
+      btn.style.color = '#D70015';
       alert('DATEV-Validierung:\n' + (d.fehler || []).join('\n'));
     }
   } catch(e) {

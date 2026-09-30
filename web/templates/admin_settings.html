@@ -1,9 +1,9 @@
 {% extends "base.html" %}
-{% block title %}Einstellungen – FiBu-Agent{% endblock %}
+{% block title %}Systemeinstellungen – FiBu-Agent{% endblock %}
 {% block content %}
 
 <div class="page-header">
-  <h1 class="page-title font-display">System-Einstellungen</h1>
+  <h1 class="page-title font-display">Systemeinstellungen</h1>
   <p class="page-subtitle">Alle Konfigurationen direkt im Browser ändern — kein Serverzugriff nötig</p>
 </div>
 
@@ -28,8 +28,8 @@
                  {% if s.scheduler_active == 'true' %}checked{% endif %}
                  style="display:none;" onchange="this.closest('form').querySelector('#sched-status').textContent = this.checked ? 'Aktiv' : 'Inaktiv'; this.closest('form').querySelector('#sched-status').style.color = this.checked ? 'var(--emerald)' : 'var(--ink-dimmer)'">
           <div id="toggle-sched" class="toggle" onclick="var cb=document.getElementById('scheduler_active'); cb.checked=!cb.checked; cb.dispatchEvent(new Event('change')); this.classList.toggle('on', cb.checked);"
-               style="width:44px;height:24px;border-radius:99px;background:{% if s.scheduler_active=='true' %}var(--emerald){% else %}rgba(167,243,208,0.15){% endif %};border:1px solid rgba(167,243,208,0.25);cursor:pointer;position:relative;transition:background 0.25s;">
-            <div style="position:absolute;top:3px;{% if s.scheduler_active=='true' %}left:22px{% else %}left:3px{% endif %};width:16px;height:16px;border-radius:50%;background:{% if s.scheduler_active=='true' %}#052119{% else %}rgba(167,243,208,0.5){% endif %};transition:left 0.25s;" id="toggle-knob-sched"></div>
+               style="width:44px;height:24px;border-radius:99px;background:{% if s.scheduler_active=='true' %}var(--emerald){% else %}rgba(248,96,48,0.15){% endif %};border:0;cursor:pointer;position:relative;transition:background 0.25s;">
+            <div style="position:absolute;top:3px;{% if s.scheduler_active=='true' %}left:22px{% else %}left:3px{% endif %};width:16px;height:16px;border-radius:50%;background:{% if s.scheduler_active=='true' %}#FFFFFF{% else %}#FFFFFF{% endif %};transition:left 0.25s;" id="toggle-knob-sched"></div>
           </div>
         </div>
         <span id="sched-status" style="font-weight:600; font-size:0.9rem; color:{% if s.scheduler_active=='true' %}var(--emerald){% else %}var(--ink-dimmer){% endif %};">
@@ -63,7 +63,6 @@
 
   <div class="surface" style="max-width:640px;">
     <h2 class="section-title">
-      <span style="color:var(--emerald); margin-right:0.5rem;">✉</span>
       Report-E-Mail
     </h2>
     <p style="font-size:0.85rem; color:var(--ink-dimmer); margin-bottom:1.25rem;">
@@ -94,7 +93,6 @@
 
   <div class="surface" style="max-width:640px;">
     <h2 class="section-title">
-      <span style="color:var(--emerald); margin-right:0.5rem;">📥</span>
       E-Mail-Eingang (IMAP)
     </h2>
     <p style="font-size:0.85rem; color:var(--ink-dimmer); margin-bottom:1.25rem;">
@@ -145,7 +143,6 @@
 
   <div class="surface" style="max-width:640px;">
     <h2 class="section-title">
-      <span style="color:var(--emerald); margin-right:0.5rem;">⚙</span>
       Pipeline-Parameter
     </h2>
 
@@ -179,7 +176,6 @@
 
   <div class="surface" style="max-width:640px;">
     <h2 class="section-title">
-      <span style="color:var(--emerald); margin-right:0.5rem;">📞</span>
       Vapi Voice-Agent (KI-Telefon-Support)
     </h2>
     <p style="font-size:0.85rem; color:var(--ink-dimmer); margin-bottom:1.25rem;">
@@ -204,10 +200,10 @@
       </div>
     </div>
 
-    {% set base_url = s.public_url.rstrip('/') if s.public_url else 'https://app.fibo-agent.com' %}
-    <div style="background:rgba(45,212,168,0.06); border:1px solid rgba(167,243,208,0.15); border-radius:10px; padding:1rem 1.25rem; margin-bottom:1.25rem; font-size:0.82rem;">
+    {% set base_url = s.public_url.rstrip('/') if s.public_url else 'https://app.fynaxa.de' %}
+    <div style="background:var(--parchment); border:0; border-radius:10px; padding:1rem 1.25rem; margin-bottom:1.25rem; font-size:0.82rem;">
       <p style="margin:0 0 0.5rem; font-weight:600; color:var(--ink);">Tool-Endpunkte für Vapi konfigurieren:</p>
-      <div style="display:flex; flex-direction:column; gap:0.35rem; font-family:monospace; color:var(--emerald);">
+      <div style="display:flex; flex-direction:column; gap:0.35rem; font-family:var(--font-mono); color:var(--stamp);">
         <span>{{ base_url }}/api/vapi/pipeline-status</span>
         <span>{{ base_url }}/api/vapi/rueckfragen</span>
         <span>{{ base_url }}/api/vapi/mandant-info</span>
@@ -229,12 +225,12 @@ document.getElementById('scheduler_active').addEventListener('change', function(
   const bg   = document.getElementById('toggle-sched');
   if (this.checked) {
     knob.style.left = '22px';
-    knob.style.background = '#052119';
-    bg.style.background = 'var(--emerald)';
+    knob.style.background = '#FFFFFF';
+    bg.style.background = 'var(--glut)';
   } else {
     knob.style.left = '3px';
-    knob.style.background = 'rgba(167,243,208,0.5)';
-    bg.style.background = 'rgba(167,243,208,0.15)';
+    knob.style.background = 'rgba(248,96,48,0.5)';
+    bg.style.background = '#E9E9EA';
   }
 });
 </script>

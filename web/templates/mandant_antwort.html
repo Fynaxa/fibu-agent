@@ -3,168 +3,60 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Rückfrage – FiBu-Agent</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <title>Rückfrage Ihrer Steuerkanzlei</title>
+  <meta name="robots" content="noindex">
+  <link rel="stylesheet" href="/static/fonts/fonts.css">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --black: #0A0A0F;
-      --surface: #111118;
-      --surface2: #1a1a24;
-      --orange: #FF6B35;
-      --green: #3ECF6D;
-      --amber: #FFB547;
-      --ink: rgba(255,255,255,0.92);
-      --ink-dim: rgba(255,255,255,0.55);
-      --ink-dimmer: rgba(255,255,255,0.35);
-      --border: rgba(255,255,255,0.08);
+      --white: #FFFFFF; --parchment: #F5F5F7; --hairline: #E0E0E0; --chip: #D2D2D7;
+      --ink: #1D1D1F; --ink-2: #3A3A3C; --grey: #6E6E73; --grey-2: #86868B;
+      --glut: #F86030; --glut-text: #BD4512; --glut-tint: rgba(248,96,48,0.10); --glut-ring: rgba(248,96,48,0.32);
+      --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+      --font-mono: ui-monospace, "SF Mono", "IBM Plex Mono", Menlo, Consolas, monospace;
     }
-    body {
-      background: var(--black);
-      color: var(--ink);
-      font-family: 'Inter', system-ui, sans-serif;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 2rem 1rem;
-    }
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 2.5rem;
-      width: min(520px, 100%);
-      box-shadow: 0 25px 60px rgba(0,0,0,0.5);
-    }
-    .logo {
-      font-size: 0.8rem;
-      font-weight: 700;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: var(--orange);
-      margin-bottom: 2rem;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-    .logo::before {
-      content: '';
-      display: inline-block;
-      width: 8px;
-      height: 8px;
-      background: var(--orange);
-      border-radius: 50%;
-    }
-    h1 {
-      font-size: 1.35rem;
-      font-weight: 700;
-      color: var(--ink);
-      margin-bottom: 0.5rem;
-      line-height: 1.3;
-    }
-    .subtitle {
-      font-size: 0.85rem;
-      color: var(--ink-dim);
-      margin-bottom: 1.75rem;
-      line-height: 1.6;
-    }
-    .frage-box {
-      background: rgba(255,181,71,0.07);
-      border: 1px solid rgba(255,181,71,0.25);
-      border-radius: 12px;
-      padding: 1.1rem 1.25rem;
-      margin-bottom: 1.75rem;
-    }
-    .frage-label {
-      font-size: 0.68rem;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: rgba(251,191,36,0.5);
-      margin-bottom: 0.4rem;
-    }
-    .frage-text {
-      font-size: 0.92rem;
-      color: #fde68a;
-      line-height: 1.6;
-    }
-    .beleg-info {
-      display: grid;
-      grid-template-columns: auto 1fr;
-      gap: 0.3rem 1rem;
-      font-size: 0.82rem;
-      margin-bottom: 1.75rem;
-      background: var(--surface2);
-      border-radius: 10px;
-      padding: 0.9rem 1rem;
-      border: 1px solid var(--border);
-    }
-    .beleg-info dt { color: var(--ink-dimmer); }
-    .beleg-info dd { color: var(--ink-dim); font-weight: 500; }
-    textarea {
-      width: 100%;
-      background: rgba(255,255,255,0.04);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      color: var(--ink);
-      font-family: inherit;
-      font-size: 0.9rem;
-      padding: 0.85rem 1rem;
-      resize: vertical;
-      outline: none;
-      transition: border-color 0.2s;
-      margin-bottom: 1rem;
-    }
-    textarea:focus { border-color: rgba(255,107,53,0.5); }
-    textarea::placeholder { color: var(--ink-dimmer); }
-    button[type=submit] {
-      width: 100%;
-      background: var(--orange);
-      color: #fff;
-      border: none;
-      border-radius: 10px;
-      padding: 0.85rem;
-      font-size: 0.95rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: opacity 0.2s, transform 0.15s;
-    }
-    button[type=submit]:hover { opacity: 0.88; transform: translateY(-1px); }
-    .footer {
-      margin-top: 1.5rem;
-      font-size: 0.72rem;
-      color: var(--ink-dimmer);
-      text-align: center;
-      line-height: 1.6;
-    }
-    .already-answered {
-      background: rgba(62,207,109,0.08);
-      border: 1px solid rgba(62,207,109,0.25);
-      border-radius: 12px;
-      padding: 1.25rem;
-      text-align: center;
-      color: var(--green);
-    }
+    body { background: var(--parchment); color: var(--ink); font-family: var(--font); font-size: 15px; line-height: 1.47; letter-spacing: -0.008em; min-height: 100vh; display: flex; align-items: flex-start; justify-content: center; padding: 3rem 1rem; -webkit-font-smoothing: antialiased; }
+    :focus-visible { outline: 3px solid var(--glut-ring); outline-offset: 2px; }
+    button, textarea { font: inherit; color: inherit; }
+    .card { background: var(--white); border-radius: 18px; padding: 32px 36px; width: min(560px, 100%); }
+    .logo { display: flex; align-items: center; gap: 10px; margin-bottom: 28px; }
+    .logo img { width: 26px; height: 26px; border-radius: 7px; display: block; }
+    .logo-name { font-weight: 600; font-size: 17px; letter-spacing: -0.01em; }
+    .logo-sub { font-size: 13px; color: var(--grey); }
+    h1 { font-weight: 600; font-size: 28px; letter-spacing: -0.022em; line-height: 1.15; margin-bottom: 8px; }
+    .subtitle { font-size: 15px; color: var(--grey); margin-bottom: 24px; line-height: 1.5; }
+    /* Die Frage als Haftnotiz auf dem Beleg */
+    .frage-box { background: var(--glut-tint); border-radius: 12px; padding: 16px 18px; margin-bottom: 24px; }
+    .frage-label { font-size: 13px; font-weight: 600; color: var(--glut-text); margin-bottom: 6px; }
+    .frage-text { font-size: 17px; color: var(--ink); line-height: 1.45; letter-spacing: -0.012em; }
+    .beleg-info { display: grid; grid-template-columns: auto 1fr; gap: 6px 20px; font-size: 14px; margin-bottom: 24px; padding: 14px 16px; border-radius: 12px; background: var(--parchment); }
+    .beleg-info dt { color: var(--grey); }
+    .beleg-info dd { font-family: var(--font-mono); font-variant-numeric: tabular-nums; color: var(--ink); }
+    label { display: block; font-size: 13px; font-weight: 500; color: var(--ink-2); margin-bottom: 6px; }
+    textarea { width: 100%; background: var(--white); border: 1px solid var(--chip); border-radius: 12px; padding: 12px 14px; font-size: 15px; resize: vertical; margin-bottom: 16px; }
+    textarea:focus { outline: none; border-color: var(--glut); box-shadow: 0 0 0 4px var(--glut-ring); }
+    textarea::placeholder { color: var(--grey-2); }
+    button[type=submit] { width: 100%; background: var(--ink); color: #fff; border: 1px solid var(--ink); border-radius: 980px; padding: 12px 18px; font-size: 15px; font-weight: 600; cursor: pointer; }
+    button[type=submit]:hover { background: #333336; border-color: #333336; }
+    .footer { margin-top: 24px; font-size: 13px; color: var(--grey); line-height: 1.5; }
+    .already-answered { display: inline-block; font-size: 13px; font-weight: 600; color: var(--ink); background: var(--parchment); border-radius: 980px; padding: 6px 14px; }
+    @media (max-width: 560px) { body { padding: 16px; } .card { padding: 22px 18px; border-radius: 14px; } h1 { font-size: 24px; } }
   </style>
 </head>
 <body>
 <div class="card">
-  <div class="logo">FiBu-Agent · Fynaxa</div>
+  <div class="logo"><img src="/static/icon-192x192.png?v=4" alt=""><span class="logo-name">FiBu-Agent</span><span class="logo-sub">von Fynaxa</span></div>
 
   {% if bereits_beantwortet %}
     <h1>Bereits beantwortet</h1>
-    <p class="subtitle">Diese Rückfrage wurde bereits beantwortet. Vielen Dank!</p>
-    <div class="already-answered">
-      ✓ Ihre Antwort ist bei uns eingegangen.
-    </div>
+    <p class="subtitle">Diese Rückfrage ist schon beantwortet worden. Eine zweite Antwort ist nicht nötig.</p>
+    <div class="already-answered">Antwort eingegangen</div>
   {% else %}
-    <h1>Rückfrage zur Buchung</h1>
-    <p class="subtitle">Ihr Steuerberater bittet Sie um eine kurze Klärung zu einem Beleg. Bitte beantworten Sie die folgende Frage.</p>
+    <h1>Rückfrage zu einem Beleg</h1>
+    <p class="subtitle">Ihre Steuerkanzlei bittet um eine kurze Klärung. Ihre Antwort geht direkt in die Buchung ein.</p>
 
     <div class="frage-box">
-      <div class="frage-label">Frage Ihres Steuerberaters</div>
+      <div class="frage-label">Frage der Kanzlei</div>
       <div class="frage-text">{{ rq.frage }}</div>
     </div>
 
@@ -177,24 +69,25 @@
       <dt>Belegdatum</dt><dd>{{ beleg.belegdatum }}</dd>
       {% endif %}
       {% if beleg.bruttobetrag %}
-      <dt>Betrag</dt><dd>{{ "%.2f"|format(beleg.bruttobetrag) }} {{ beleg.waehrung or 'EUR' }}</dd>
+      <dt>Betrag</dt><dd>{{ "%.2f"|format(beleg.bruttobetrag)|replace('.', ',') }} {{ beleg.waehrung or 'EUR' }}</dd>
       {% endif %}
       {% if beleg.rechnungsnummer %}
-      <dt>Rechnungs-Nr.</dt><dd>{{ beleg.rechnungsnummer }}</dd>
+      <dt>Rechnungsnummer</dt><dd>{{ beleg.rechnungsnummer }}</dd>
       {% endif %}
     </dl>
     {% endif %}
 
     <form method="POST" action="{{ url_for('mandant_antwort_submit', token=rq.token) }}">
-      <textarea name="antwort" rows="5" required
-                placeholder="Ihre Antwort…">{% if rq.antwort %}{{ rq.antwort }}{% endif %}</textarea>
+      <label for="antwort">Ihre Antwort</label>
+      <textarea id="antwort" name="antwort" rows="5" required
+                placeholder="Zum Beispiel: Das war eine Bewirtung mit Kunden am 12.03.">{% if rq.antwort %}{{ rq.antwort }}{% endif %}</textarea>
       <button type="submit">Antwort senden</button>
     </form>
   {% endif %}
 
   <div class="footer">
-    Diese Seite wurde von Ihrem Steuerberater geteilt.<br>
-    Kein Login erforderlich. Ihre Antwort wird sicher übermittelt.
+    Diesen Link hat Ihre Steuerkanzlei erzeugt; eine Anmeldung ist nicht nötig.
+    Die Antwort wird der Kanzlei zugeordnet und dort in der Buchung berücksichtigt.
   </div>
 </div>
 </body>
