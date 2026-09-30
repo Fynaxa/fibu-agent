@@ -10,7 +10,12 @@ Rückfrage-Queue statt im Export.
 einen Pilotlauf mit Testbelegen durchlaufen hat. Einen zahlenden Kunden gab es
 nicht; der Markt wurde nach dem Piloten nicht weiterverfolgt. Der Prototyp läuft
 trotzdem seit Wochen als Docker-Dienst hinter nginx unter
-**https://app.fynaxa.de** (Login, Demo-Zugang auf Anfrage).
+**https://app.fynaxa.de**. Demo-Zugang ohne Anfrage: Benutzer `gast`, Passwort
+`Belege-Demo-2026` (Mandant DEMO, erfundene Belege, Tagesbudget gedeckelt).
+
+Zur Historie: Der Code entstand Juni und Juli 2026 als Pilot in einem privaten
+Repository; die Commit-Historie hier beginnt mit der Veröffentlichung am
+30.09.2026, nichts ist rückdatiert.
 
 |  |  |
 |---|---|
@@ -25,7 +30,7 @@ trotzdem seit Wochen als Docker-Dienst hinter nginx unter
 
 ## Oberfläche
 
-Weiß trägt, Schwarz spricht, Orange zeigt: weiße Karten auf hellem Grau, eine
+Weiße Karten auf hellem Grau, eine
 Schrift (die Systemschrift, auf Apple-Geräten SF Pro), Kontrast über Größe und
 Gewicht statt über Farbe. Schwarz ist Text und primäre Aktion, das Fynaxa-Orange
 ist der einzige Akzent (aktiver Reiter, Rückfragen, Fokus), Rot gibt es nur für
@@ -52,9 +57,10 @@ Passwort dazu wäre eine Einladung.
 ```
 Beleg (IMAP-Postfach, Watchfolder oder Upload)
   → Extraktion      pdfplumber, bei Bildern Claude Vision
-  → Kontierung      1. Regel aus skr03_rules.json (Lieferant, Verwendungszweck)
-                    2. Sprachmodell mit Kontenrahmen als Kontext
-                    3. Rückfrage-Queue, wenn Konfidenz < 0,7
+  → Kontierung      1. Lieferanten-Gedächtnis (ab zehn Bestätigungen ohne Rückfrage)
+                    2. Regel aus skr03_rules.json (Lieferant, Verwendungszweck)
+                    3. Sprachmodell mit Kontenrahmen als Kontext
+                    4. Rückfrage-Queue, wenn Konfidenz < 0,7
   → Validierung     Pflichtfelder, Betrags- und MwSt-Plausibilität, Dublettencheck
   → Export          DATEV-Buchungsstapel (EXTF, CSV), eine Datei je Lauf
   → Bericht         Tageszusammenfassung: verarbeitet, exportiert, offen
