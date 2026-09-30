@@ -1,0 +1,397 @@
+{% extends "base.html" %}
+{% block title %}Beleg {{ beleg.beleg_id }} – FiBu-Agent{% endblock %}
+{% block content %}
+
+<div class="page-header" style="display:flex; align-items:center; gap:1rem; flex-wrap:wrap;">
+  <div>
+    <h1 class="page-title font-display">Beleg-Details</h1>
+    <p class="page-subtitle mono">{{ beleg.beleg_id }}</p>
+  </div>
+  <div style="margin-left:auto; display:flex; gap:0.5rem; flex-wrap:wrap;">
+    <a href="{{ url_for('rueckfragen') }}" class="btn btn-ghost">← Rückfragen</a>
+    <a href="{{ url_for('audit_detail', beleg_id=beleg.beleg_id) }}" class="btn btn-ghost">Audit-Trail</a>
+  </div>
+</div>
+
+{# Status-Badge #}
+<div style="margin-bottom:1.25rem; display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
+  {% if beleg.status == 'rueckfrage' %}
+  <span style="display:inline-flex;align-items:center;gap:0.4rem;background:rgba(255,181,71,0.12);color:#fde68a;border:1px solid rgba(251,191,36,0.35);border-radius:99px;padding:0.35rem 1rem;font-size:0.85rem;font-weight:600;box-shadow:0 0 0 3px rgba(255,181,71,0.06);">
+    ⚠ Rückfrage — manuelle Prüfung erforderlich
+  </span>
+  {% elif beleg.status == 'validiert' %}
+  <span style="display:inline-flex;align-items:center;gap:0.4rem;background:rgba(62,207,109,0.1);color:var(--green);border:1px solid rgba(62,207,109,0.3);border-radius:99px;padding:0.35rem 1rem;font-size:0.85rem;font-weight:600;">
+    ✓ Validiert
+  </span>
+  {% elif beleg.status == 'exportiert' %}
+  <span style="display:inline-flex;align-items:center;gap:0.4rem;background:rgba(62,207,109,0.08);color:var(--green);border:1px solid rgba(62,207,109,0.2);border-radius:99px;padding:0.35rem 1rem;font-size:0.85rem;font-weight:600;">
+    ✓ Exportiert (DATEV)
+  </span>
+  {% else %}
+  <span style="display:inline-flex;align-items:center;gap:0.4rem;background:rgba(255,77,77,0.1);color:#fca5a5;border:1px solid rgba(255,77,77,0.2);border-radius:99px;padding:0.35rem 1rem;font-size:0.85rem;font-weight:600;">
+    {{ beleg.status }}
+  </span>
+  {% endif %}
+
+  {# Feature 3: Lernschleife-Badge #}
+  {% if vendor_count and vendor_count > 1 %}
+  <span title="Der KI-Kontierungsvorschlag basiert auf {{ vendor_count }} bestätigten Buchungen für diesen Lieferanten."
+        style="display:inline-flex;align-items:center;gap:0.35rem;background:rgba(77,159,255,0.1);color:#93c5fd;border:1px solid rgba(77,159,255,0.25);border-radius:99px;padding:0.3rem 0.85rem;font-size:0.78rem;font-weight:600;cursor:default;">
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm0 4v4l3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    Basierend auf {{ vendor_count }} Buchungen
+  </span>
+  {% endif %}
+</div>
+
+{# KI-Begründung Banner #}
+{% if beleg.rueckfrage_grund %}
+<div style="background:rgba(255,181,71,0.07); border:1px solid rgba(255,181,71,0.3); border-radius:14px; padding:1.1rem 1.25rem; margin-bottom:1.5rem; display:flex; gap:0.9rem; align-items:flex-start;">
+  <div style="flex-shrink:0; width:32px; height:32px; background:rgba(255,181,71,0.15); border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fbbf24; font-size:0.85rem;">⚠</div>
+  <div style="flex:1;">
+    <div style="font-size:0.72rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:rgba(251,191,36,0.6); margin-bottom:0.3rem;">KI-Begründung</div>
+    <div style="font-size:0.92rem; color:#fde68a; font-weight:500; line-height:1.5;">{{ beleg.rueckfrage_grund }}</div>
+  </div>
+</div>
+{% endif %}
+
+{# ── Feature 1: Split-Screen Layout ───────────────────────────────── #}
+<div style="display:grid; grid-template-columns:2fr 3fr; gap:1.25rem; margin-bottom:1.5rem; min-height:520px;">
+
+  {# LEFT: PDF-Viewer #}
+  <div class="surface" style="padding:0; overflow:hidden; display:flex; flex-direction:column; border-radius:16px; position:relative;">
+    <div style="padding:0.85rem 1.1rem; border-bottom:1px solid rgba(255,255,255,0.06); display:flex; align-items:center; gap:0.5rem;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="color:var(--ink-dimmer);"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 2v6h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span style="font-size:0.75rem; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; color:var(--ink-dimmer);">Original-Beleg</span>
+      <span style="margin-left:auto; font-size:0.72rem; color:var(--ink-dimmer); font-family:'SF Mono',monospace; word-break:break-all;">{{ beleg.dateiname or '–' }}</span>
+      <a href="{{ url_for('beleg_pdf', beleg_id=beleg.beleg_id) }}" target="_blank"
+         style="flex-shrink:0; display:inline-flex; align-items:center; gap:0.3rem; padding:0.25rem 0.6rem; border-radius:6px; border:1px solid rgba(255,255,255,0.1); color:var(--ink-dimmer); font-size:0.72rem; font-weight:600; text-decoration:none; transition:all 0.15s;"
+         onmouseover="this.style.color='var(--ink)'; this.style.borderColor='rgba(255,255,255,0.25)'"
+         onmouseout="this.style.color='var(--ink-dimmer)'; this.style.borderColor='rgba(255,255,255,0.1)'">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M15 3h6v6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 14L21 3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        Neuer Tab
+      </a>
+    </div>
+    <div style="flex:1; min-height:460px; background:rgba(0,0,0,0.25);" id="pdf-container">
+      <iframe id="pdf-frame"
+              src="{{ url_for('beleg_pdf', beleg_id=beleg.beleg_id) }}"
+              style="width:100%; height:100%; min-height:460px; border:none; border-radius:0 0 16px 16px;"
+              loading="lazy"
+              onerror="document.getElementById('pdf-fallback').style.display='flex'; this.style.display='none';">
+      </iframe>
+      <div id="pdf-fallback" style="display:none; flex-direction:column; align-items:center; justify-content:center; height:100%; min-height:300px; gap:0.75rem; color:var(--ink-dimmer); text-align:center; padding:2rem;">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" style="opacity:0.3;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="currentColor" stroke-width="1.5"/></svg>
+        <div style="font-size:0.85rem;">Vorschau nicht verfügbar<br><span style="font-size:0.75rem; opacity:0.6;">Datei archiviert oder nicht zugänglich</span></div>
+      </div>
+    </div>
+  </div>
+
+  {# RIGHT: Belegdaten + Kontierung #}
+  <div style="display:flex; flex-direction:column; gap:1.25rem;">
+
+    {# Belegdaten mit Konfidenz-Ampel #}
+    <div class="surface" style="flex:1;">
+      <h2 class="section-title">Belegdaten (OCR-Extraktion)</h2>
+
+      {# Feature 4: Per-Feld Konfidenz-Ampel #}
+      {% macro ampel(field_key) %}
+        {% set k = feld_konfidenz.get(field_key, 0.7) %}
+        {% if k >= 0.82 %}
+          <span title="Konfidenz hoch ({{ '%.0f'|format(k*100) }}%)" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 5px rgba(62,207,109,0.6);flex-shrink:0;margin-top:0.2rem;"></span>
+        {% elif k >= 0.6 %}
+          <span title="Konfidenz mittel ({{ '%.0f'|format(k*100) }}%) — bitte prüfen" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#fbbf24;box-shadow:0 0 5px rgba(251,191,36,0.5);flex-shrink:0;margin-top:0.2rem;"></span>
+        {% else %}
+          <span title="Konfidenz niedrig ({{ '%.0f'|format(k*100) }}%) — manuelle Prüfung erforderlich" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#f87171;box-shadow:0 0 5px rgba(248,113,113,0.5);flex-shrink:0;margin-top:0.2rem;"></span>
+        {% endif %}
+      {% endmacro %}
+
+      <dl style="display:grid; grid-template-columns:auto auto 1fr; gap:0.4rem 1rem; font-size:0.875rem; margin-bottom:1.25rem; align-items:start;">
+
+        {{ ampel('lieferant') }}
+        <dt style="color:var(--ink-dim); white-space:nowrap;">Lieferant</dt>
+        <dd style="font-weight:600; color:var(--ink);">{{ beleg.lieferant or '–' }}</dd>
+
+        {{ ampel('belegdatum') }}
+        <dt style="color:var(--ink-dim); white-space:nowrap;">Datum</dt>
+        <dd>{{ beleg.belegdatum or '–' }}</dd>
+
+        {{ ampel('rechnungsnummer') }}
+        <dt style="color:var(--ink-dim); white-space:nowrap;">Rechnungs-Nr.</dt>
+        <dd class="mono">{{ beleg.rechnungsnummer or '–' }}</dd>
+
+        {{ ampel('bruttobetrag') }}
+        <dt style="color:var(--ink-dim); white-space:nowrap;">Brutto</dt>
+        <dd style="font-variant-numeric:tabular-nums; font-weight:700; color:var(--ink); font-size:1.05rem;">
+          {{ "%.2f"|format(beleg.bruttobetrag or 0) }} {{ beleg.waehrung or 'EUR' }}
+        </dd>
+
+        {{ ampel('nettobetrag') }}
+        <dt style="color:var(--ink-dim); white-space:nowrap;">Netto</dt>
+        <dd style="font-variant-numeric:tabular-nums;">{{ "%.2f"|format(beleg.nettobetrag or 0) }}</dd>
+
+        {{ ampel('mwst_satz') }}
+        <dt style="color:var(--ink-dim); white-space:nowrap;">MwSt</dt>
+        <dd style="font-variant-numeric:tabular-nums;">{{ "%.2f"|format(beleg.mwst_betrag or 0) }} ({{ beleg.mwst_satz or '–' }} %)</dd>
+
+        <span></span>
+        <dt style="color:var(--ink-dim); white-space:nowrap;">Datei</dt>
+        <dd class="mono" style="font-size:0.73rem; word-break:break-all; color:var(--ink-dimmer);">{{ beleg.dateiname or '–' }}</dd>
+      </dl>
+
+      {# Gesamt-Konfidenz-Bar #}
+      {% set conf = (beleg.ocr_konfidenz or 0) * 100 %}
+      <div style="border-top:1px solid rgba(255,255,255,0.06); padding-top:1rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.45rem;">
+          <div style="display:flex; align-items:center; gap:0.6rem;">
+            <span style="font-size:0.72rem; font-weight:700; letter-spacing:0.07em; text-transform:uppercase; color:var(--ink-dimmer);">OCR-Konfidenz gesamt</span>
+            <span style="font-size:0.67rem; color:var(--ink-dimmer); opacity:0.7;">● grün = sicher &nbsp;● gelb = prüfen &nbsp;● rot = manuell</span>
+          </div>
+          <span style="font-weight:700; font-size:0.9rem;
+            color:{% if conf >= 80 %}var(--green){% elif conf >= 60 %}#fde68a{% else %}#fca5a5{% endif %};">
+            {{ "%.0f"|format(conf) }}%
+          </span>
+        </div>
+        <div style="background:rgba(255,255,255,0.06); border-radius:99px; height:7px; overflow:hidden;">
+          <div style="height:100%; border-radius:99px; width:{{ "%.0f"|format(conf) }}%; transition:width 0.8s var(--ease-out);
+            background:{% if conf >= 80 %}linear-gradient(90deg,#22c55e,var(--green)){% elif conf >= 60 %}linear-gradient(90deg,#d97706,#fbbf24){% else %}linear-gradient(90deg,#dc2626,#f87171){% endif %};
+            box-shadow:0 0 8px {% if conf >= 80 %}rgba(62,207,109,0.4){% elif conf >= 60 %}rgba(255,181,71,0.4){% else %}rgba(255,77,77,0.4){% endif %};">
+          </div>
+        </div>
+        <div style="font-size:0.73rem; color:var(--ink-dimmer); margin-top:0.35rem;">
+          {% if conf >= 80 %}Hoch — KI-Extraktion sehr zuverlässig{% elif conf >= 60 %}Mittel — Bitte Werte manuell prüfen{% else %}Niedrig — manuelle Dateneingabe empfohlen{% endif %}
+        </div>
+      </div>
+    </div>
+
+    {# KI-Kontierungsvorschlag #}
+    <div class="surface">
+      <h2 class="section-title">KI-Kontierungsvorschlag</h2>
+      <div style="background:rgba(255,107,53,0.05); border:1px solid rgba(255,107,53,0.15); border-radius:12px; padding:1rem; margin-bottom:1.25rem;">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; margin-bottom:0.75rem;">
+          <div>
+            <div style="font-size:0.68rem; text-transform:uppercase; letter-spacing:0.1em; color:var(--ink-dimmer); margin-bottom:0.2rem;">Soll-Konto</div>
+            <div class="mono" style="font-size:1.6rem; font-weight:800; color:var(--orange); line-height:1;">{{ beleg.soll_konto or '–' }}</div>
+          </div>
+          <div>
+            <div style="font-size:0.68rem; text-transform:uppercase; letter-spacing:0.1em; color:var(--ink-dimmer); margin-bottom:0.2rem;">Haben-Konto</div>
+            <div class="mono" style="font-size:1.6rem; font-weight:800; color:var(--ink-soft); line-height:1;">{{ beleg.haben_konto or '1200' }}</div>
+          </div>
+        </div>
+        <div style="display:flex; gap:1.5rem; font-size:0.82rem; flex-wrap:wrap;">
+          <div>
+            <span style="color:var(--ink-dimmer);">Steuer: </span>
+            <span class="mono" style="color:var(--ink-mute);">{{ beleg.steuerschluessel or '–' }}</span>
+          </div>
+          <div>
+            <span style="color:var(--ink-dimmer);">Methode: </span>
+            <span style="color:var(--ink-mute);">
+              {% if beleg.kontierung_methode == 'vendor_cache' %}Vendor-Cache
+              {% elif beleg.kontierung_methode == 'regel' %}Regelwerk
+              {% elif beleg.kontierung_methode == 'llm' %}KI-Modell
+              {% else %}{{ beleg.kontierung_methode or '–' }}{% endif %}
+            </span>
+          </div>
+        </div>
+      </div>
+      {% if beleg.buchungstext %}
+      <div style="font-size:0.82rem; color:var(--ink-dim); background:rgba(255,255,255,0.025); border-radius:8px; padding:0.6rem 0.8rem; border:1px solid rgba(255,255,255,0.05);">
+        <span style="color:var(--ink-dimmer); font-size:0.72rem; text-transform:uppercase; letter-spacing:0.07em;">Buchungstext</span><br>
+        {{ beleg.buchungstext }}
+      </div>
+      {% endif %}
+    </div>
+
+  </div>{# /right column #}
+</div>{# /split-screen #}
+
+{# ── Feature 5: Mandanten-Rückfrage-Link ─────────────────────────── #}
+{% if beleg.status in ('rueckfrage', 'validiert') %}
+<div class="surface" style="margin-bottom:1rem; border-color:rgba(77,159,255,0.18);">
+  <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
+    <div style="flex:1;">
+      <h2 class="section-title" style="margin-bottom:0.2rem;">Mandanten-Rückfrage</h2>
+      <p style="font-size:0.82rem; color:var(--ink-dim); margin:0;">Sende dem Mandanten einen Link — er kann antworten ohne Login.</p>
+    </div>
+    <button class="btn btn-ghost" onclick="toggleRQForm()" id="rq-toggle-btn"
+            style="border-color:rgba(77,159,255,0.3); color:#93c5fd; flex-shrink:0;">
+      + Rückfrage senden
+    </button>
+  </div>
+
+  <div id="rq-form-wrap" style="display:none; margin-top:1.1rem; border-top:1px solid rgba(255,255,255,0.06); padding-top:1.1rem;">
+    <div class="form-group" style="margin-bottom:0.75rem;">
+      <label class="form-label" for="rq-frage">Frage an den Mandanten</label>
+      <textarea id="rq-frage" rows="3" class="form-input" style="resize:vertical;"
+                placeholder="z.B. Bitte bestätigen Sie den Lieferanten und den Verwendungszweck dieser Rechnung."></textarea>
+    </div>
+    <div style="display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap;">
+      <button class="btn btn-primary" onclick="createRQToken()" id="rq-create-btn"
+              style="background:rgba(77,159,255,0.15); border-color:rgba(77,159,255,0.4); color:#93c5fd;">
+        Link erstellen
+      </button>
+      <div id="rq-link-wrap" style="display:none; flex:1;">
+        <div style="font-size:0.72rem; color:var(--ink-dimmer); margin-bottom:0.25rem;">Link für Mandanten (einmalig kopieren!):</div>
+        <div style="display:flex; gap:0.5rem; align-items:center;">
+          <input type="text" id="rq-link-output" readonly class="form-input"
+                 style="font-size:0.8rem; font-family:'SF Mono',monospace; background:rgba(0,0,0,0.3);">
+          <button class="btn btn-ghost btn-sm" onclick="copyRQLink()" style="flex-shrink:0;">Kopieren</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{# ── Korrektur-Formular ───────────────────────────────────────────── #}
+{% if beleg.status in ('rueckfrage',) %}
+<div class="surface" style="margin-bottom:1rem; border-color:rgba(255,107,53,0.2);">
+  <h2 class="section-title">Manuelle Korrektur &amp; Freigabe</h2>
+  <p style="font-size:0.85rem;color:var(--ink-dim);margin-bottom:1.5rem;">
+    Prüfe die extrahierten Daten und passe das Konto wenn nötig an. Jede Korrektur fließt automatisch in den Lernalgorithmus ein.
+  </p>
+
+  <form method="POST" action="{{ url_for('beleg_resolve', beleg_id=beleg.beleg_id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="action" value="approve" id="form_action">
+
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:1rem; margin-bottom:1.5rem;">
+      <div class="form-group">
+        <label class="form-label">Soll-Konto (SKR03) <span style="color:var(--orange);">*</span></label>
+        <input type="text" name="soll_konto" class="form-input" required
+               pattern="^\d{4,5}$" title="4-5 stellige Kontonummer"
+               value="{{ beleg.soll_konto or '' }}"
+               placeholder="z.B. 4920">
+        <div style="font-size:0.73rem;color:var(--ink-dimmer);margin-top:0.3rem; line-height:1.6;">
+          4920=Telefon · 4930=Büro · 4964=EDV<br>
+          4660=Reise · 4210=Miete · 4952=Beratung
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Haben-Konto</label>
+        <input type="text" name="haben_konto" class="form-input"
+               pattern="^\d{4,5}$"
+               value="{{ beleg.haben_konto or '1200' }}"
+               placeholder="1200 (Bank) oder 1000 (Kasse)">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Steuerschlüssel</label>
+        <select name="steuerschluessel" class="form-input">
+          <option value="9" {% if beleg.steuerschluessel == '9' %}selected{% endif %}>9 — 19% Vorsteuer</option>
+          <option value="8" {% if beleg.steuerschluessel == '8' %}selected{% endif %}>8 — 7% Vorsteuer</option>
+          <option value="0" {% if beleg.steuerschluessel == '0' %}selected{% endif %}>0 — steuerfrei</option>
+          <option value="21" {% if beleg.steuerschluessel == '21' %}selected{% endif %}>21 — Reverse Charge EU</option>
+          <option value="84" {% if beleg.steuerschluessel == '84' %}selected{% endif %}>84 — Reverse Charge Drittland</option>
+          <option value="57" {% if beleg.steuerschluessel == '57' %}selected{% endif %}>57 — Bewirtungskosten 70%</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group" style="margin-bottom:1.5rem;">
+      <label class="form-label">Buchungstext (max. 60 Zeichen)</label>
+      <input type="text" name="buchungstext" class="form-input" maxlength="60"
+             value="{{ beleg.buchungstext or '' }}"
+             placeholder="Freitext für DATEV-Import">
+    </div>
+
+    <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+      <button type="submit" class="btn btn-primary" onclick="document.getElementById('form_action').value='approve'">
+        ✓ Genehmigen &amp; DATEV-freigeben
+      </button>
+      <button type="submit" class="btn btn-ghost"
+              style="color:#fca5a5;border-color:rgba(248,113,113,0.3);"
+              onclick="document.getElementById('form_action').value='reject'">
+        ✗ Ablehnen
+      </button>
+    </div>
+  </form>
+</div>
+{% endif %}
+
+{# Audit-Trail-Auszug #}
+{% if history %}
+<div class="surface" style="margin-top:0.5rem;">
+  <h2 class="section-title">Verlauf</h2>
+  <div style="display:flex;flex-direction:column;gap:0.5rem;">
+    {% for event in history %}
+    <div style="display:flex;gap:1rem;align-items:flex-start;font-size:0.82rem;padding:0.5rem 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+      <span style="color:var(--ink-dimmer);min-width:130px;flex-shrink:0;font-family:'SF Mono',monospace;">
+        {{ event.zeitstempel[:16] if event.zeitstempel else '–' }}
+      </span>
+      <span style="color:var(--orange);min-width:100px;flex-shrink:0;">{{ event.event_type }}</span>
+      <span style="color:var(--ink-dim);">
+        {% if event.details %}
+          {% set d = event.details | tojson if event.details is mapping else event.details %}
+          {{ d[:120] }}
+        {% endif %}
+      </span>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* ── PDF-Fallback ─────────────────────────────────────────── */
+document.getElementById('pdf-frame')?.addEventListener('load', function() {
+  /* Check if iframe loaded anything real */
+  try {
+    const doc = this.contentDocument;
+    if (!doc || doc.body?.innerHTML === '') throw new Error();
+  } catch(e) {
+    /* cross-origin or empty — fallback shown via onerror on src */
+  }
+});
+
+/* ── Feature 5: Rückfrage-Token ────────────────────────────── */
+function toggleRQForm() {
+  const wrap = document.getElementById('rq-form-wrap');
+  const btn = document.getElementById('rq-toggle-btn');
+  const open = wrap.style.display === 'none';
+  wrap.style.display = open ? 'block' : 'none';
+  btn.textContent = open ? '− Schließen' : '+ Rückfrage senden';
+}
+
+async function createRQToken() {
+  const frage = document.getElementById('rq-frage').value.trim();
+  if (!frage) { alert('Bitte gib eine Frage ein.'); return; }
+
+  const btn = document.getElementById('rq-create-btn');
+  btn.disabled = true;
+  btn.textContent = '…';
+
+  const fd = new FormData();
+  fd.append('beleg_id', '{{ beleg.beleg_id }}');
+  fd.append('frage', frage);
+  fd.append('csrf_token', document.querySelector('input[name=csrf_token]')?.value || '');
+
+  try {
+    const r = await fetch('/api/rueckfrage-token', { method: 'POST', body: fd });
+    const d = await r.json();
+    if (d.link) {
+      document.getElementById('rq-link-output').value = d.link;
+      document.getElementById('rq-link-wrap').style.display = 'block';
+      btn.textContent = '✓ Link erstellt';
+    } else {
+      btn.textContent = 'Fehler';
+      btn.disabled = false;
+    }
+  } catch(e) {
+    btn.textContent = 'Fehler';
+    btn.disabled = false;
+  }
+}
+
+function copyRQLink() {
+  const inp = document.getElementById('rq-link-output');
+  inp.select();
+  document.execCommand('copy');
+  const btn = event.target;
+  btn.textContent = 'Kopiert!';
+  setTimeout(() => btn.textContent = 'Kopieren', 1800);
+}
+</script>
+{% endblock %}

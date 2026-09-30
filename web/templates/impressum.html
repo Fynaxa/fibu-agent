@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Impressum – FiBu-Agent{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title font-display">Impressum</h1>
+</div>
+
+<div class="surface" style="max-width:700px;">
+    <h2>Angaben gemäß § 5 TMG</h2>
+    <p style="margin-bottom:1rem;">
+        Fynaxa KI Automation Agency<br>
+        Inhaber: Konstantin Konradi<br>
+        c/o COCENTER, Koppoldstr. 1<br>
+        86551 Aichach<br>
+        Deutschland
+    </p>
+
+    <h2>Vertreten durch</h2>
+    <p style="margin-bottom:1rem;">Konstantin Konradi</p>
+
+    <h2>Kontakt</h2>
+    <p style="margin-bottom:1rem;">
+        E-Mail: info@fynaxa.de
+    </p>
+
+    <h2>Umsatzsteuer-Identifikationsnummer</h2>
+    <p style="margin-bottom:1rem; font-size:0.85rem; color:var(--ink-dimmer);">
+        Kleinunternehmer gemäß § 19 UStG — keine USt-IdNr. erforderlich.
+    </p>
+
+    <h2>Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV</h2>
+    <p style="margin-bottom:1rem;">
+        Konstantin Konradi<br>
+        c/o COCENTER, Koppoldstr. 1, 86551 Aichach
+    </p>
+
+    <h2>Hinweis gemäß Steuerberatungsgesetz (StBerG)</h2>
+    <p style="margin-bottom:1rem; padding:1rem; background:rgba(251,191,36,0.08); border:1px solid rgba(251,191,36,0.2); border-radius:10px; font-size:0.85rem; color:#fde68a;">
+        Der Anbieter erbringt <strong>keine Steuerberatung</strong> im Sinne des StBerG.
+        FiBu-Agent ist ein technisches Hilfswerkzeug zur automatisierten Vorkontierung von Buchungsbelegen.
+        Die automatische Kontierung stellt einen Vorschlag dar und ersetzt nicht die Prüfung durch einen
+        Steuerberater, Wirtschaftsprüfer oder vereidigten Buchprüfer. Die Verantwortung für die
+        ordnungsgemäße Buchführung verbleibt beim Anwender.
+    </p>
+
+    <h2>Streitschlichtung</h2>
+    <p style="font-size:0.85rem;">
+        Die Europäische Kommission stellt eine Plattform zur Online-Streitbeilegung (OS) bereit.
+        Wir sind nicht bereit oder verpflichtet, an Streitbeilegungsverfahren vor einer
+        Verbraucherschlichtungsstelle teilzunehmen, da wir ausschließlich Geschäftskunden bedienen.
+    </p>
+</div>
+
+<a href="{{ url_for('dashboard') }}" class="btn btn-ghost" style="margin-top:1rem;">← Zurück</a>
+{% endblock %}

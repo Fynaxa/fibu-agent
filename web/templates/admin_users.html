@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Benutzerverwaltung – FiBu-Agent{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h1 class="page-title font-display">Benutzerverwaltung</h1>
+  <p class="page-subtitle">Benutzer anlegen und Zugriffsrechte verwalten</p>
+</div>
+
+<div class="surface accent-strip" style="max-width:720px;">
+  <h2 class="section-title">Neuen Benutzer anlegen</h2>
+  <form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="action" value="create">
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label" for="username">Benutzername</label>
+        <input class="form-input" type="text" id="username" name="username" required autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="password">Passwort <span style="color:var(--ink-dimmer);">(mind. 8 Zeichen)</span></label>
+        <input class="form-input" type="password" id="password" name="password" required minlength="8" autocomplete="new-password">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="display_name">Anzeigename</label>
+        <input class="form-input" type="text" id="display_name" name="display_name" placeholder="optional">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="role">Rolle</label>
+        <select class="form-select" name="role" id="role">
+          <option value="user">Benutzer</option>
+          <option value="admin">Administrator</option>
+        </select>
+      </div>
+      <div class="form-group form-grid-full">
+        <label class="form-label">Mandanten-Zugriff <span style="color:var(--ink-dimmer);">(leer = alle)</span></label>
+        <div style="display:flex; flex-wrap:wrap; gap:0.75rem; margin-top:0.35rem;">
+          {% for m in mandanten %}
+          <label class="form-check-label">
+            <input class="form-check" type="checkbox" name="mandant_ids" value="{{ m.id }}">
+            {{ m.name }} <span class="mono" style="font-size:0.75rem; color:var(--ink-dimmer);">({{ m.id }})</span>
+          </label>
+          {% endfor %}
+          {% if not mandanten %}
+          <span style="font-size:0.825rem; color:var(--ink-dimmer);">Keine Mandanten vorhanden</span>
+          {% endif %}
+        </div>
+      </div>
+      <div class="form-grid-full" style="padding-top:0.25rem;">
+        <button type="submit" class="btn btn-primary">Benutzer anlegen</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<div class="surface">
+  <h2 class="section-title">Aktive Benutzer ({{ users|length }})</h2>
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Benutzername</th>
+          <th>Anzeigename</th>
+          <th>Rolle</th>
+          <th>Mandanten</th>
+          <th>Erstellt</th>
+          <th>Letzter Login</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td class="mono" style="color:var(--ink);">{{ u.username }}</td>
+          <td>{{ u.display_name or '–' }}</td>
+          <td><span class="badge {{ 'admin' if u.role == 'admin' else 'neu' }}">{{ u.role }}</span></td>
+          <td style="font-size:0.8rem; color:var(--ink-dimmer);">{{ u.mandant_ids or 'alle' }}</td>
+          <td style="font-size:0.8rem; color:var(--ink-dimmer);">{{ u.created_at[:10] if u.created_at else '–' }}</td>
+          <td style="font-size:0.8rem; color:var(--ink-dimmer);">{{ u.last_login[:16] if u.last_login else 'nie' }}</td>
+          <td>
+            {% if u.id != current_user.id %}
+            <form method="POST" style="display:inline;" onsubmit="return confirm('Benutzer wirklich deaktivieren?');">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="action" value="deactivate">
+              <input type="hidden" name="user_id" value="{{ u.id }}">
+              <button type="submit" class="btn btn-danger btn-sm">Deaktivieren</button>
+            </form>
+            {% else %}
+            <span style="font-size:0.78rem; color:var(--ink-dimmer);">Du</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

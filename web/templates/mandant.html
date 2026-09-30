@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+{% block title %}{{ mandant.name }} – FiBu-Agent{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; flex-wrap:wrap;">
+    <div>
+      <h1 class="page-title font-display">{{ mandant.name }}</h1>
+      <p class="page-subtitle">
+        <span class="mono">{{ mandant.id }}</span>
+        <span style="margin:0 0.5rem; opacity:0.4;">·</span>
+        {{ mandant.get('kontenrahmen', 'SKR03') }}
+        {% if mandant.get('berater_nr') %}
+        <span style="margin:0 0.5rem; opacity:0.4;">·</span>
+        Berater {{ mandant.berater_nr }}
+        {% endif %}
+        {% if mandant.get('notizen') %}
+        <span style="margin:0 0.5rem; opacity:0.4;">·</span>
+        {{ mandant.notizen }}
+        {% endif %}
+      </p>
+    </div>
+    <a href="{{ url_for('dashboard') }}" class="btn btn-ghost btn-sm" style="align-self:flex-start; margin-top:0.25rem;">← Zurück</a>
+  </div>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card blue">
+    <div class="stat-number">{{ belege|length }}</div>
+    <div class="stat-label">Belege gesamt</div>
+  </div>
+  <div class="stat-card green">
+    <div class="stat-number">{{ belege|selectattr('status', 'equalto', 'exportiert')|list|length }}</div>
+    <div class="stat-label">Exportiert</div>
+  </div>
+  <div class="stat-card amber">
+    <div class="stat-number">{{ belege|selectattr('status', 'equalto', 'rueckfrage')|list|length }}</div>
+    <div class="stat-label">Rückfragen</div>
+  </div>
+  <div class="stat-card red">
+    <div class="stat-number">{{ belege|selectattr('status', 'equalto', 'fehler')|list|length }}</div>
+    <div class="stat-label">Fehler</div>
+  </div>
+</div>
+
+<div class="surface accent-strip">
+  <h2 class="section-title">Pipeline starten</h2>
+  <form method="POST" action="{{ url_for('run_pipeline') }}" style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="mandant_id" value="{{ mandant.id }}">
+    <button type="submit" class="btn btn-primary">
+      <svg width="14" height="14" viewBox="0 0 15 15" fill="none"><path d="M3.5 2.5l9 5-9 5V2.5z" fill="currentColor"/></svg>
+      Run für {{ mandant.name }}
+    </button>
+    <a href="{{ url_for('upload') }}?mandant={{ mandant.id }}" class="btn btn-ghost">Beleg hochladen</a>
+  </form>
+</div>
+
+{% if inbox_email %}
+<div class="surface" style="margin-bottom:1rem;">
+  <h2 class="section-title">E-Mail-Eingang</h2>
+  <p style="font-size:0.85rem; color:var(--ink-soft); margin-bottom:0.75rem;">
+    Belege (PDF, JPG, PNG) direkt an diese Adresse schicken — sie landen automatisch in der Inbox dieses Mandanten:
+  </p>
+  <div style="display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap; margin-bottom:0.75rem;">
+    <code style="background:var(--surface-alt,#181f2e); padding:0.4rem 0.9rem; border-radius:8px;
+                 font-size:0.92rem; color:var(--emerald); border:1px solid rgba(45,212,168,0.25);
+                 letter-spacing:0.02em; user-select:all;">{{ inbox_email }}</code>
+    <button onclick="navigator.clipboard.writeText('{{ inbox_email }}').then(()=>{this.textContent='✓ Kopiert';setTimeout(()=>this.textContent='Kopieren',1800)})"
+            class="btn btn-ghost btn-sm">Kopieren</button>
+  </div>
+  <button type="button" class="btn btn-ghost btn-sm" onclick="pollMail(this)">
+    E-Mails jetzt abholen
+  </button>
+  <span id="poll-result" style="font-size:0.82rem; color:var(--ink-soft); margin-left:0.5rem;"></span>
+</div>
+{% endif %}
+
+{% if exports %}
+<div class="surface">
+  <h2 class="section-title">DATEV-Exporte</h2>
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Dateiname</th>
+          <th>Größe</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in exports %}
+        <tr>
+          <td class="mono" style="color:var(--ink);">{{ e.name }}</td>
+          <td style="font-size:0.82rem; color:var(--ink-dimmer);">{{ "%.1f"|format(e.stat().st_size / 1024) }} KB</td>
+          <td style="display:flex;gap:0.4rem;flex-wrap:wrap;">
+            <a href="{{ url_for('download_file', filepath=e.relative_to(root)) }}" class="btn btn-ghost btn-sm">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M12 8v8m0 0l-3-3m3 3 3-3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><rect x="3" y="16" width="18" height="5" rx="1" stroke="currentColor" stroke-width="2"/></svg>
+              Download
+            </a>
+            <button class="btn btn-ghost btn-sm"
+                    onclick="validateDatev('{{ e.relative_to(root) }}', this)"
+                    title="DATEV-Format prüfen">
+              ✓ Validieren
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% if belege %}
+<div class="surface">
+  <h2 class="section-title">Belege ({{ belege|length }})</h2>
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Beleg-ID</th>
+          <th>Lieferant</th>
+          <th>Datum</th>
+          <th>Betrag</th>
+          <th>Konto</th>
+          <th>Methode</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for b in belege %}
+        <tr>
+          <td class="mono" style="font-size:0.77rem;">{{ b.get('beleg_id', '?')[:12] }}</td>
+          <td style="font-weight:500; color:var(--ink);">{{ b.get('lieferant', '–') }}</td>
+          <td style="font-size:0.82rem;">{{ b.get('belegdatum', '–') }}</td>
+          <td class="td-right" style="font-variant-numeric:tabular-nums;">{{ "%.2f"|format(b.get('bruttobetrag', 0)) }} €</td>
+          <td class="mono" style="font-size:0.77rem; color:var(--ink-dim);">{{ b.get('soll_konto', '?') }}/{{ b.get('haben_konto', '?') }}</td>
+          <td>
+            {% if b.get('kontierung_methode') == 'llm' %}
+            <span class="badge kontiert">LLM</span>
+            {% elif b.get('kontierung_methode') == 'regel' %}
+            <span class="badge exportiert">Regel</span>
+            {% endif %}
+          </td>
+          <td><span class="badge {{ b.get('status', 'neu') }}">{{ b.get('status', 'neu') }}</span></td>
+          <td><a href="{{ url_for('audit_detail', beleg_id=b.get('beleg_id', '')) }}" class="btn btn-ghost btn-sm">Audit</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="surface">
+  <div class="empty-state">Noch keine Belege für diesen Mandanten verarbeitet.</div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function pollMail(btn) {
+  btn.disabled = true;
+  btn.textContent = 'Prüfe…';
+  const result = document.getElementById('poll-result');
+  result.textContent = '';
+  try {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+    const r = await fetch('/api/poll-mail', {
+      method: 'POST',
+      headers: { 'X-CSRFToken': csrfToken, 'Content-Type': 'application/json' },
+    });
+    const d = await r.json();
+    if (d.error) {
+      result.textContent = '✗ ' + d.error;
+      result.style.color = '#fca5a5';
+    } else {
+      result.textContent = `✓ ${d.saved} Anhang/Anhänge gespeichert, ${d.emails_processed} E-Mail(s) geprüft`;
+      result.style.color = 'var(--emerald)';
+      if (d.saved > 0) setTimeout(() => location.reload(), 1500);
+    }
+  } catch(e) {
+    result.textContent = '✗ Verbindungsfehler';
+    result.style.color = '#fca5a5';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'E-Mails jetzt abholen';
+  }
+}
+
+async function validateDatev(filepath, btn) {
+  btn.disabled = true;
+  btn.textContent = '…';
+  try {
+    const r = await fetch('/validate/' + encodeURIComponent(filepath));
+    const d = await r.json();
+    if (d.valid) {
+      btn.textContent = '✓ OK';
+      btn.style.color = 'var(--emerald)';
+    } else {
+      btn.textContent = '✗ Fehler';
+      btn.style.color = '#fca5a5';
+      alert('DATEV-Validierung:\n' + (d.fehler || []).join('\n'));
+    }
+  } catch(e) {
+    btn.textContent = '? Fehler';
+    btn.disabled = false;
+  }
+}
+</script>
+{% endblock %}

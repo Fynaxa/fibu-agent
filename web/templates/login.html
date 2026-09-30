@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Anmelden – Fynaxa FiBu</title>
+  <meta name="theme-color" content="#FF6B35">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Fynaxa FiBu">
+  <link rel="manifest" href="/static/manifest.json?v=2">
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/icon-32x32.png">
+  <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+  <link rel="shortcut icon" href="/static/favicon.ico">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://api.fontshare.com">
+  <link rel="preconnect" href="https://cdn.fontshare.com" crossorigin>
+  <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=switzer@400,500,600,700,800&display=swap">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --black:        #0A0A0F;
+      --black-soft:   #14141A;
+      --black-line:   rgba(255,255,255,0.07);
+      --orange:       #FF6B35;
+      --orange-deep:  #E04E1F;
+      --orange-soft:  rgba(255,107,53,0.12);
+      --orange-faint: rgba(255,107,53,0.06);
+      --ink:          #F8F9FC;
+      --ink-mute:     rgba(248,249,252,0.62);
+      --ink-soft:     rgba(248,249,252,0.36);
+      --shadow-cta:   0 1px 0 rgba(255,255,255,0.18) inset, 0 8px 22px -8px rgba(255,107,53,.55);
+      --ease-out:     cubic-bezier(0.16, 1, 0.3, 1);
+      --spring:       cubic-bezier(0.34, 1.36, 0.64, 1);
+    }
+
+    html, body {
+      min-height: 100vh;
+      background-color: var(--black);
+      background-image:
+        radial-gradient(1000px 650px at 75% -12%, rgba(255,107,53,0.09), transparent 55%),
+        radial-gradient(700px 500px at 5% 95%, rgba(255,107,53,0.05), transparent 60%);
+      color: var(--ink);
+      font-family: 'Switzer', 'Inter', system-ui, -apple-system, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      display: flex; align-items: center; justify-content: center; padding: 1.5rem;
+    }
+    ::selection { background: var(--orange); color: var(--black); }
+
+    /* ── Loader ────────────────────────────── */
+    #page-loader {
+      position: fixed; inset: 0; z-index: 9999;
+      background: var(--black);
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 1.5rem;
+      transition: opacity 0.5s var(--ease-out);
+    }
+    #page-loader.done { opacity: 0; pointer-events: none; }
+    .loader-bar-track { position: absolute; top: 0; left: 0; right: 0; height: 2px; background: rgba(255,107,53,0.12); }
+    .loader-bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--orange-deep), var(--orange)); border-radius: 0 2px 2px 0; transition: width 0.3s var(--ease-out); box-shadow: 0 0 12px rgba(255,107,53,0.6); }
+    .loader-logo { height: 36px; width: auto; animation: spin-in 1.2s var(--ease-out) forwards; }
+    @keyframes spin-in {
+      0%   { transform: rotate(-180deg) scale(0.6); opacity: 0; }
+      60%  { transform: rotate(10deg) scale(1.05); opacity: 1; }
+      80%  { transform: rotate(-4deg) scale(0.98); }
+      100% { transform: rotate(0deg) scale(1); opacity: 1; }
+    }
+    .loader-label { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-soft); }
+
+    /* ── Login layout ──────────────────────── */
+    .login-wrap { width: 100%; max-width: 400px; }
+
+    .login-brand {
+      display: flex; align-items: center; gap: 0.6rem;
+      justify-content: center; margin-bottom: 2rem;
+    }
+    .login-brand img { height: 28px; width: auto; }
+    .login-brand-tag {
+      font-size: 0.68rem; font-weight: 700; color: var(--ink-soft);
+      letter-spacing: 0.1em; text-transform: uppercase;
+      background: var(--orange-faint); border: 1px solid rgba(255,107,53,0.2);
+      padding: 0.15rem 0.55rem; border-radius: 99px;
+    }
+
+    .login-card {
+      background: var(--black-soft);
+      border: 1px solid var(--black-line);
+      border-radius: 22px;
+      box-shadow: 0 1px 0 rgba(255,255,255,0.04) inset, 0 1px 2px rgba(0,0,0,0.8), 0 28px 60px -20px rgba(0,0,0,.7);
+      padding: 2.25rem 2rem;
+      position: relative; overflow: hidden;
+    }
+    .login-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, var(--orange-deep), var(--orange));
+      border-radius: 22px 22px 0 0;
+    }
+
+    .login-title { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.04em; margin-bottom: 0.3rem; }
+    .login-subtitle { font-size: 0.85rem; color: var(--ink-soft); margin-bottom: 1.75rem; }
+
+    .flash-list { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1.25rem; }
+    .flash { padding: 0.7rem 1rem; border-radius: 10px; font-size: 0.85rem; font-weight: 500; }
+    .flash.error { background: rgba(255,77,77,0.08); border: 1px solid rgba(255,77,77,0.2); color: #fca5a5; }
+    .flash.success { background: rgba(62,207,109,0.08); border: 1px solid rgba(62,207,109,0.2); color: #6ee7a0; }
+
+    .form-group { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 1rem; }
+    .form-label { font-size: 0.825rem; font-weight: 600; color: var(--ink-mute); }
+    .form-input {
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px; padding: 0.7rem 0.9rem;
+      color: var(--ink); font-size: 0.9rem; font-family: 'Inter', sans-serif;
+      transition: border-color 0.2s, box-shadow 0.2s; width: 100%;
+    }
+    .form-input:focus { outline: none; border-color: rgba(255,107,53,0.5); box-shadow: 0 0 0 3px rgba(255,107,53,0.12); }
+    .form-input::placeholder { color: var(--ink-soft); }
+
+    .btn-login {
+      display: flex; align-items: center; justify-content: center; width: 100%;
+      padding: 0.75rem 1.5rem; border-radius: 999px; border: none; cursor: pointer;
+      font-family: 'Inter', sans-serif; font-weight: 700; font-size: 0.9rem;
+      color: var(--black);
+      background: linear-gradient(180deg, #FF8A5C 0%, var(--orange) 60%, var(--orange-deep) 100%);
+      box-shadow: var(--shadow-cta);
+      transition: transform 0.3s var(--spring), box-shadow 0.3s;
+      margin-top: 0.5rem; letter-spacing: 0.01em;
+    }
+    .btn-login:hover { transform: translateY(-2px); box-shadow: 0 1px 0 rgba(255,255,255,0.18) inset, 0 12px 28px -6px rgba(255,107,53,.7); }
+    .btn-login:active { transform: translateY(0); }
+
+    .login-footer { text-align: center; margin-top: 1.5rem; font-size: 0.78rem; color: var(--ink-soft); }
+    .login-footer a { color: var(--ink-soft); text-decoration: none; }
+    .login-footer a:hover { color: var(--ink-mute); }
+  </style>
+</head>
+<body>
+
+  <div id="page-loader">
+    <div class="loader-bar-track"><div class="loader-bar-fill" id="loader-bar"></div></div>
+    <img src="/static/fynaxa-logo.png" alt="Fynaxa" class="loader-logo">
+    <span class="loader-label">Fynaxa FiBu</span>
+  </div>
+
+  <div class="login-wrap">
+    <div class="login-brand">
+      <img src="/static/fynaxa-logo.png" alt="Fynaxa">
+      <span class="login-brand-tag">FiBu</span>
+    </div>
+
+    <div class="login-card">
+      <h1 class="login-title">Willkommen zurück</h1>
+      <p class="login-subtitle">Melde dich an, um auf dein Dashboard zuzugreifen.</p>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+      <div class="flash-list">
+        {% for category, message in messages %}
+        <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% endwith %}
+
+      <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="form-group">
+          <label class="form-label" for="username">Benutzername</label>
+          <input class="form-input" type="text" id="username" name="username" required autofocus autocomplete="username" placeholder="dein-benutzername">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="password">Passwort</label>
+          <input class="form-input" type="password" id="password" name="password" required autocomplete="current-password" placeholder="••••••••">
+        </div>
+        <button type="submit" class="btn-login">Anmelden →</button>
+      </form>
+    </div>
+
+    <p class="login-footer">
+      Powered by KI Automation Agency · <a href="/impressum">Impressum</a>
+    </p>
+  </div>
+
+  <script>
+  (function() {
+    var bar = document.getElementById('loader-bar');
+    var loader = document.getElementById('page-loader');
+    var prog = 0;
+    var interval = setInterval(function() {
+      prog += Math.random() * 18 + 8;
+      if (prog > 90) prog = 90;
+      bar.style.width = prog + '%';
+    }, 120);
+    window.addEventListener('load', function() {
+      clearInterval(interval);
+      bar.style.width = '100%';
+      setTimeout(function() {
+        loader.classList.add('done');
+        setTimeout(function() { loader.remove(); }, 500);
+      }, 350);
+    });
+  })();
+  </script>
+</body>
+</html>

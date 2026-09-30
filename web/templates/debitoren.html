@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{% block title %}Debitorenbuchhaltung – FiBu-Agent{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h1 class="page-title">Debitorenbuchhaltung</h1>
+  <p class="page-subtitle">Ausgangsrechnungen + offene Forderungen + Mahnwesen</p>
+</div>
+
+{% if get_flashed_messages() %}
+<ul class="flash-list">
+  {% for cat, msg in get_flashed_messages(with_categories=true) %}
+  <li class="flash {{ cat }}">{{ msg }}</li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+{# Filter + Aktionen — als separate Elemente, keine verschachtelten Forms #}
+<div class="surface surface-sm" style="margin-bottom:1.5rem;display:flex;gap:1rem;align-items:flex-end;flex-wrap:wrap;">
+  <form method="get" style="display:flex;gap:1rem;align-items:flex-end;">
+    <div>
+      <label class="form-label">Mandant</label>
+      <select name="mandant_id" class="form-select" onchange="this.form.submit()">
+        <option value="">Alle</option>
+        {% for m in mandanten %}<option value="{{ m.id }}" {% if aktueller_mandant == m.id %}selected{% endif %}>{{ m.name }}</option>{% endfor %}
+      </select>
+    </div>
+  </form>
+  <a href="{{ url_for('debitor_export', mandant_id=aktueller_mandant or '') }}" class="btn btn-ghost">DATEV-Export</a>
+  <form method="post" action="{{ url_for('debitor_mahnlauf') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="mandant_id" value="{{ aktueller_mandant or '' }}">
+    <button type="submit" class="btn btn-ghost">Mahnlauf</button>
+  </form>
+</div>
+
+{# KPIs #}
+<div class="stats-grid">
+  <div class="stat-card amber">
+    <div class="stat-number">{{ "%.0f"|format(summary.offen_summe or 0) }} €</div>
+    <div class="stat-label">Offene Forderungen</div>
+  </div>
+  <div class="stat-card red">
+    <div class="stat-number">{{ summary.ueberfaellig_count or 0 }}</div>
+    <div class="stat-label">Überfällig</div>
+  </div>
+  <div class="stat-card green">
+    <div class="stat-number">{{ "%.0f"|format(summary.bezahlt_summe or 0) }} €</div>
+    <div class="stat-label">Bezahlt (gesamt)</div>
+  </div>
+  <div class="stat-card blue">
+    <div class="stat-number">{{ summary.gesamt or 0 }}</div>
+    <div class="stat-label">Rechnungen gesamt</div>
+  </div>
+</div>
+
+{# Offene Forderungen #}
+{% if offene_forderungen %}
+<div class="surface accent-strip" style="margin-bottom:1.5rem;">
+  <h2 class="section-title">Offene Forderungen</h2>
+  <table class="data-table">
+    <thead><tr><th>Debitor</th><th>RE-Nr.</th><th>Datum</th><th>Fällig</th><th>Überfällig</th><th>Betrag</th><th></th></tr></thead>
+    <tbody>
+      {% for r in offene_forderungen %}
+      <tr>
+        <td style="font-weight:600;">{{ r.debitor_name }}</td>
+        <td class="mono">{{ r.rechnungsnummer or "–" }}</td>
+        <td class="mono">{{ r.rechnungsdatum[:10] }}</td>
+        <td class="mono">{{ r.faelligkeitsdatum[:10] }}</td>
+        <td>
+          {% if r.ueberfaellig %}
+          <span class="badge badge-red">{{ r.tage_ueberfaellig }} Tage</span>
+          {% else %}
+          <span class="badge badge-green">Fristgerecht</span>
+          {% endif %}
+        </td>
+        <td style="font-weight:700;color:var(--amber);">{{ "%.2f"|format(r.betrag_brutto) }} €</td>
+        <td>
+          <form method="post" action="{{ url_for('debitor_bezahlt', rechnung_id=r.rechnung_id) }}" style="display:inline-flex;gap:0.5rem;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-ghost btn-sm">✓ Bezahlt</button>
+          </form>
+          <form method="post" action="{{ url_for('debitor_storno', rechnung_id=r.rechnung_id) }}" style="display:inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-ghost btn-sm" onclick="return confirm('Stornieren?')" style="color:var(--red);">Storno</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{# Neue Rechnung #}
+<div class="surface accent-strip a2" style="margin-bottom:1.5rem;">
+  <h2 class="section-title">Ausgangsrechnung erfassen</h2>
+  <form method="post" action="{{ url_for('debitor_erfassen') }}" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div>
+      <label class="form-label">Debitor (Kunde) *</label>
+      <input type="text" name="debitor_name" class="form-input" required placeholder="z.B. Mustermann GmbH">
+    </div>
+    <div>
+      <label class="form-label">E-Mail</label>
+      <input type="email" name="debitor_email" class="form-input" placeholder="kunde@beispiel.de">
+    </div>
+    <div>
+      <label class="form-label">Rechnungsnummer</label>
+      <input type="text" name="rechnungsnummer" class="form-input" placeholder="z.B. RE2026-001">
+    </div>
+    <div>
+      <label class="form-label">Rechnungsdatum *</label>
+      <input type="date" name="rechnungsdatum" class="form-input" required>
+    </div>
+    <div>
+      <label class="form-label">Nettobetrag (€) *</label>
+      <input type="number" name="betrag_netto" class="form-input" required step="0.01" min="0">
+    </div>
+    <div>
+      <label class="form-label">MwSt (%)</label>
+      <select name="mwst_satz" class="form-select">
+        <option value="19">19%</option>
+        <option value="7">7%</option>
+        <option value="0">0% (steuerfrei)</option>
+      </select>
+    </div>
+    <div>
+      <label class="form-label">Zahlungsziel (Tage)</label>
+      <input type="number" name="zahlungsziel_tage" class="form-input" value="30" min="1">
+    </div>
+    <div>
+      <label class="form-label">Kontenrahmen</label>
+      <select name="kontenrahmen" class="form-select">
+        <option value="SKR03">SKR03</option>
+        <option value="SKR04">SKR04</option>
+      </select>
+    </div>
+    <div>
+      <label class="form-label">Mandant</label>
+      <select name="mandant_id" class="form-select">
+        <option value="">Kein</option>
+        {% for m in mandanten %}<option value="{{ m.id }}" {% if aktueller_mandant == m.id %}selected{% endif %}>{{ m.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="form-label">Buchungstext</label>
+      <input type="text" name="buchungstext" class="form-input" placeholder="Optional">
+    </div>
+    <div style="grid-column:1/-1;">
+      <button type="submit" class="btn btn-primary">Rechnung erfassen</button>
+    </div>
+  </form>
+</div>
+
+{# Alle Rechnungen #}
+<div class="surface">
+  <h2 class="section-title">Alle Ausgangsrechnungen</h2>
+  {% if rechnungen %}
+  <table class="data-table">
+    <thead><tr><th>Debitor</th><th>RE-Nr.</th><th>Datum</th><th>Brutto</th><th>Status</th><th>Zahlung</th></tr></thead>
+    <tbody>
+      {% for r in rechnungen %}
+      <tr>
+        <td style="font-weight:600;">{{ r.debitor_name }}</td>
+        <td class="mono">{{ r.rechnungsnummer or "–" }}</td>
+        <td class="mono">{{ r.rechnungsdatum[:10] }}</td>
+        <td style="font-weight:600;">{{ "%.2f"|format(r.betrag_brutto) }} €</td>
+        <td>
+          {% if r.status == 'bezahlt' %}<span class="badge badge-green">Bezahlt</span>
+          {% elif r.status == 'storniert' %}<span class="badge badge-red">Storniert</span>
+          {% else %}<span class="badge badge-amber">Offen</span>{% endif %}
+        </td>
+        <td class="mono text-dim">{{ r.zahlungsdatum[:10] if r.zahlungsdatum else "–" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="text-dim">Noch keine Ausgangsrechnungen erfasst.</p>
+  {% endif %}
+</div>
+
+{% endblock %}

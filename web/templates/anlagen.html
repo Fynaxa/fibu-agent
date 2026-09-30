@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% block title %}Anlagenbuchhaltung – FiBu-Agent{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h1 class="page-title">Anlagenbuchhaltung</h1>
+  <p class="page-subtitle">Asset-Registry + AfA-Berechnung</p>
+</div>
+
+{% if get_flashed_messages() %}
+<ul class="flash-list">
+  {% for cat, msg in get_flashed_messages(with_categories=true) %}
+  <li class="flash {{ cat }}">{{ msg }}</li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+{# Filter #}
+<div class="surface surface-sm" style="margin-bottom:1.5rem;">
+  <form method="get" style="display:flex;gap:1rem;align-items:flex-end;flex-wrap:wrap;">
+    <div>
+      <label class="form-label">Mandant</label>
+      <select name="mandant_id" class="form-select" onchange="this.form.submit()">
+        <option value="">Alle</option>
+        {% for m in mandanten %}<option value="{{ m.id }}" {% if aktueller_mandant == m.id %}selected{% endif %}>{{ m.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="form-label">Jahr</label>
+      <select name="jahr" class="form-select" onchange="this.form.submit()">
+        {% for j in range(2024, 2030) %}<option value="{{ j }}" {% if aktuelles_jahr == j %}selected{% endif %}>{{ j }}</option>{% endfor %}
+      </select>
+    </div>
+  </form>
+</div>
+
+{# AfA-Jahresbericht #}
+{% if afa_bericht %}
+<div class="surface accent-strip">
+  <h2 class="section-title">AfA-Bericht {{ aktuelles_jahr }}</h2>
+  <div class="stats-grid" style="margin-bottom:1rem;">
+    <div class="stat-card orange">
+      <div class="stat-number">{{ afa_bericht|length }}</div>
+      <div class="stat-label">Anlagen mit AfA</div>
+    </div>
+    <div class="stat-card blue">
+      <div class="stat-number">{{ "%.0f"|format(afa_bericht|sum(attribute='afa_betrag_jahr')) }} €</div>
+      <div class="stat-label">Gesamt AfA {{ aktuelles_jahr }}</div>
+    </div>
+  </div>
+  <table class="data-table">
+    <thead><tr><th>Bezeichnung</th><th>AK</th><th>ND</th><th>AfA/Jahr</th><th>Konto</th></tr></thead>
+    <tbody>
+      {% for r in afa_bericht %}
+      <tr>
+        <td>{{ r.bezeichnung }}{% if r.gwg %} <span class="badge badge-amber">GWG</span>{% endif %}</td>
+        <td>{{ "%.2f"|format(r.anschaffungskosten) }} €</td>
+        <td>{{ r.nutzungsdauer_jahre }} J</td>
+        <td style="font-weight:700;color:var(--orange);">{{ "%.2f"|format(r.afa_betrag_jahr) }} €</td>
+        <td class="mono">{{ r.soll_konto }} / {{ r.haben_konto }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{# Anlagen-Liste #}
+<div class="surface" style="margin-bottom:1.5rem;">
+  <h2 class="section-title">Anlagen-Registry</h2>
+  {% if anlagen %}
+  <table class="data-table">
+    <thead><tr><th>Bezeichnung</th><th>Lieferant</th><th>Anschaffung</th><th>AK</th><th>ND</th><th>Konto</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+      {% for a in anlagen %}
+      <tr>
+        <td>{{ a.bezeichnung }}{% if a.gwg %} <span class="badge badge-amber">GWG</span>{% endif %}</td>
+        <td class="text-dim">{{ a.lieferant or "–" }}</td>
+        <td class="mono">{{ a.anschaffungsdatum[:10] }}</td>
+        <td>{{ "%.2f"|format(a.anschaffungskosten) }} €</td>
+        <td>{{ a.nutzungsdauer_jahre }} J</td>
+        <td class="mono">{{ a.soll_konto }}</td>
+        <td>
+          {% if a.aktiv %}<span class="badge badge-green">Aktiv</span>
+          {% else %}<span class="badge badge-red">Abgang {{ a.abgangsdatum or "" }}</span>{% endif %}
+        </td>
+        <td>
+          {% if a.aktiv %}
+          <form method="post" action="{{ url_for('anlage_deactivate', anlage_id=a.anlage_id) }}" style="display:inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-ghost btn-sm" onclick="return confirm('Anlage als abgegangen markieren?')">Abgang</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="text-dim">Noch keine Anlagen erfasst.</p>
+  {% endif %}
+</div>
+
+{# Neue Anlage erfassen #}
+<div class="surface accent-strip a2">
+  <h2 class="section-title">Neue Anlage erfassen</h2>
+  <form method="post" action="{{ url_for('anlage_erfassen') }}" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div>
+      <label class="form-label">Bezeichnung *</label>
+      <input type="text" name="bezeichnung" class="form-input" required placeholder="z.B. Dell Laptop XPS 15">
+    </div>
+    <div>
+      <label class="form-label">Lieferant</label>
+      <input type="text" name="lieferant" class="form-input" placeholder="z.B. Dell GmbH">
+    </div>
+    <div>
+      <label class="form-label">Anschaffungsdatum *</label>
+      <input type="date" name="anschaffungsdatum" class="form-input" required>
+    </div>
+    <div>
+      <label class="form-label">Anschaffungskosten (netto, €) *</label>
+      <input type="number" name="anschaffungskosten" class="form-input" required step="0.01" min="0">
+    </div>
+    <div>
+      <label class="form-label">Nutzungsdauer (Jahre) *</label>
+      <input type="number" name="nutzungsdauer_jahre" class="form-input" required min="1" max="50" value="3">
+    </div>
+    <div>
+      <label class="form-label">Kategorie</label>
+      <select name="kategorie" class="form-select">
+        <option value="default">Standard (Büro)</option>
+        <option value="edv">EDV / IT</option>
+        <option value="fahrzeug">Fahrzeug</option>
+        <option value="maschinen">Maschinen</option>
+        <option value="gwg">GWG (250–800 €)</option>
+      </select>
+    </div>
+    <div>
+      <label class="form-label">Kontenrahmen</label>
+      <select name="kontenrahmen" class="form-select">
+        <option value="SKR03">SKR03</option>
+        <option value="SKR04">SKR04</option>
+      </select>
+    </div>
+    <div>
+      <label class="form-label">Mandant</label>
+      <select name="mandant_id" class="form-select">
+        <option value="">Kein</option>
+        {% for m in mandanten %}<option value="{{ m.id }}" {% if aktueller_mandant == m.id %}selected{% endif %}>{{ m.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div style="grid-column:1/-1;">
+      <label class="form-label">Notizen</label>
+      <input type="text" name="notizen" class="form-input" placeholder="Optional">
+    </div>
+    <div style="grid-column:1/-1;">
+      <button type="submit" class="btn btn-primary">Anlage erfassen</button>
+    </div>
+  </form>
+</div>
+
+{% endblock %}

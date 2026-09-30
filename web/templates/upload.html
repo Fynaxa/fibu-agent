@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Belege hochladen – FiBu-Agent{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h1 class="page-title font-display">Belege hochladen</h1>
+  <p class="page-subtitle">PDF, PNG oder JPEG — der Agent übernimmt den Rest</p>
+</div>
+
+<div class="surface accent-strip" style="max-width:640px;">
+  <h2 class="section-title">Dateien auswählen</h2>
+  <form method="POST" enctype="multipart/form-data" action="{{ url_for('upload') }}" id="upload-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div class="form-group" style="margin-bottom:1.25rem;">
+      <label class="form-label" for="mandant_id">Mandant (optional)</label>
+      <select name="mandant_id" id="mandant_id" class="form-select">
+        {% if current_user and current_user.role == 'admin' %}
+        <option value="">Global (kein Mandant)</option>
+        {% endif %}
+        {% for m in mandanten %}
+        <option value="{{ m.id }}">{{ m.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="form-group" style="margin-bottom:1.5rem;">
+      <label class="form-label">Belege</label>
+      <label class="form-file" for="belege" id="drop-zone">
+        <div id="drop-label">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" style="margin:0 auto 0.75rem; display:block; color:var(--emerald); opacity:0.6;">
+            <path d="M12 16V8m0 0L9 11m3-3 3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M3 15v2a4 4 0 004 4h10a4 4 0 004-4v-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+          <span style="font-weight:600; color:var(--ink-dim);">Dateien hier ablegen oder klicken</span><br>
+          <span style="font-size:0.775rem; color:var(--ink-dimmer);">PDF, PNG, JPG, JPEG, TIFF · Mehrere Dateien möglich</span>
+        </div>
+        <div id="file-names" style="display:none; color:var(--mint); font-size:0.85rem; font-weight:500;"></div>
+      </label>
+      <input type="file" name="belege" id="belege" multiple accept=".pdf,.png,.jpg,.jpeg,.tiff,.tif">
+    </div>
+
+    <button type="submit" class="btn btn-primary">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 16V8m0 0L9 11m3-3 3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 15v2a4 4 0 004 4h10a4 4 0 004-4v-2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      Hochladen
+    </button>
+  </form>
+</div>
+
+<div class="surface surface-sm" style="max-width:640px;">
+  <h2 class="section-title" style="font-size:0.85rem;">Hinweise</h2>
+  <ul style="font-size:0.825rem; color:var(--ink-dimmer); padding-left:1.2rem; line-height:2; list-style-type:disc;">
+    <li>Unterstützte Formate: PDF, PNG, JPG, JPEG, TIFF</li>
+    <li>Mehrere Dateien gleichzeitig möglich</li>
+    <li>Belege werden im Inbox-Ordner des gewählten Mandanten abgelegt</li>
+    <li>Anschließend Pipeline über das Dashboard starten</li>
+  </ul>
+</div>
+
+<script>
+const input = document.getElementById('belege');
+const zone = document.getElementById('drop-zone');
+const dropLabel = document.getElementById('drop-label');
+const fileNames = document.getElementById('file-names');
+
+input.addEventListener('change', function() {
+  if (input.files.length > 0) {
+    const names = Array.from(input.files).map(f => f.name).join(', ');
+    fileNames.textContent = input.files.length + ' Datei(en): ' + names;
+    dropLabel.style.display = 'none';
+    fileNames.style.display = 'block';
+    zone.style.borderColor = 'rgba(45,212,168,0.5)';
+  }
+});
+
+zone.addEventListener('dragover', function(e) {
+  e.preventDefault();
+  zone.style.borderColor = 'rgba(45,212,168,0.5)';
+  zone.style.background = 'rgba(45,212,168,0.06)';
+});
+zone.addEventListener('dragleave', function() {
+  zone.style.borderColor = '';
+  zone.style.background = '';
+});
+zone.addEventListener('drop', function(e) {
+  e.preventDefault();
+  if (e.dataTransfer.files.length > 0) {
+    input.files = e.dataTransfer.files;
+    input.dispatchEvent(new Event('change'));
+  }
+  zone.style.background = '';
+});
+</script>
+
+{% endblock %}

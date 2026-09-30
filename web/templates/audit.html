@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Audit {{ beleg_id[:12] }} – FiBu-Agent{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; flex-wrap:wrap;">
+    <div>
+      <h1 class="page-title font-display">Audit-Log</h1>
+      <p class="page-subtitle mono">{{ beleg_id }}</p>
+    </div>
+    <a href="{{ url_for('dashboard') }}" class="btn btn-ghost btn-sm" style="align-self:flex-start; margin-top:0.25rem;">← Zurück</a>
+  </div>
+</div>
+
+<div class="surface">
+  <h2 class="section-title">Hash-Chain Verifizierung</h2>
+  {% if verification.get('valid') %}
+  <div style="display:flex; align-items:center; gap:0.75rem;">
+    <div style="width:32px; height:32px; border-radius:50%; background:rgba(45,212,168,0.15); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#2dd4a8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <div>
+      <p style="font-weight:600; color:var(--emerald);">Integritätsprüfung bestanden</p>
+      <p style="font-size:0.825rem; color:var(--ink-dimmer);">{{ verification.get('entries', 0) }} Einträge verifiziert</p>
+    </div>
+  </div>
+  {% elif verification.get('entries', 0) == 0 %}
+  <p style="color:var(--ink-dimmer); font-size:0.875rem;">Kein Audit-Log für diesen Beleg vorhanden.</p>
+  {% else %}
+  <div style="display:flex; align-items:center; gap:0.75rem;">
+    <div style="width:32px; height:32px; border-radius:50%; background:rgba(248,113,113,0.12); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 8v5m0 3v1M12 2a10 10 0 100 20A10 10 0 0012 2z" stroke="#f87171" stroke-width="2" stroke-linecap="round"/></svg>
+    </div>
+    <div>
+      <p style="font-weight:600; color:#fca5a5;">Integritätsfehler erkannt</p>
+      {% if verification.get('fehler') %}
+      <ul style="font-size:0.82rem; color:#fca5a5; padding-left:1.2rem; margin-top:0.4rem; line-height:1.7;">
+        {% for f in verification.fehler %}<li>{{ f }}</li>{% endfor %}
+      </ul>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+{% if history %}
+<div class="surface">
+  <h2 class="section-title">Ereignis-Timeline ({{ history|length }} Einträge)</h2>
+  <div class="timeline">
+    {% for entry in history %}
+    <div class="timeline-item">
+      <div class="timeline-time">{{ entry.get('zeitstempel', '–') }} · {{ entry.get('akteur', '–') }}</div>
+      <div class="timeline-event">{{ entry.get('event_type', '–') }}</div>
+      {% if entry.get('details') %}
+      <div class="timeline-details">
+        {% if entry.details is mapping %}
+        {% for k, v in entry.details.items() %}
+        <span class="mono" style="color:var(--emerald);">{{ k }}</span>: {{ v }}<br>
+        {% endfor %}
+        {% else %}
+        {{ entry.details }}
+        {% endif %}
+      </div>
+      {% endif %}
+      <div class="timeline-hash">SHA-256: {{ entry.get('hash', '–')[:24] }}…</div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

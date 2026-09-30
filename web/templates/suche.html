@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% block title %}Suche – FiBu-Agent{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h1 class="page-title font-display">Belege durchsuchen</h1>
+  <p class="page-subtitle">Lieferant, Rechnungsnummer, Buchungstext, Konto oder Datum — alles auf einmal</p>
+</div>
+
+<div style="margin-bottom:2rem;">
+  <form method="GET" action="{{ url_for('suche') }}" id="search-form">
+    <div style="display:flex; gap:0; max-width:760px;">
+      <div style="position:relative; flex:1;">
+        <span style="position:absolute; left:1.1rem; top:50%; transform:translateY(-50%); color:var(--ink-dimmer); pointer-events:none;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/>
+            <path d="M21 21l-4.35-4.35" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </span>
+        <input type="text" name="q" id="search-input"
+               value="{{ q or '' }}"
+               placeholder="Suche in allen Belegen …"
+               class="form-input"
+               autocomplete="off"
+               autofocus
+               style="padding-left:3rem; border-radius:14px 0 0 14px; font-size:1rem; height:54px; border-right:none;">
+      </div>
+      <button type="submit" class="btn btn-primary"
+              style="border-radius:0 14px 14px 0; height:54px; padding:0 2rem; font-size:0.9rem; box-shadow:var(--shadow-cta);">
+        Suchen
+      </button>
+    </div>
+  </form>
+</div>
+
+{% if q %}
+  <div style="margin-bottom:1rem; font-size:0.82rem; color:var(--ink-dimmer);">
+    {% if ergebnisse %}
+    <span>{{ ergebnisse|length }} Treffer für </span>
+    {% else %}
+    <span>Keine Treffer für </span>
+    {% endif %}
+    <strong style="color:var(--orange);">„{{ q }}"</strong>
+  </div>
+
+  {% if ergebnisse %}
+  <div style="display:flex; flex-direction:column; gap:0.6rem;">
+    {% for b in ergebnisse %}
+    <div class="surface surface-sm"
+         style="display:grid; grid-template-columns:12px 1fr auto; gap:1rem; align-items:center; padding:0.9rem 1.25rem; border-radius:14px; transition:border-color 0.18s, transform 0.18s var(--spring);"
+         onmouseover="this.style.borderColor='rgba(255,107,53,0.3)';this.style.transform='translateY(-1px)'"
+         onmouseout="this.style.borderColor='var(--black-line)';this.style.transform=''">
+
+      <div style="width:10px; height:10px; border-radius:50%; flex-shrink:0;
+        background:{% if b.status == 'exportiert' %}var(--green){% elif b.status == 'rueckfrage' %}var(--amber){% elif b.status == 'fehler' %}var(--red){% else %}var(--ink-dimmer){% endif %};
+        box-shadow:0 0 0 3px {% if b.status == 'exportiert' %}rgba(62,207,109,0.15){% elif b.status == 'rueckfrage' %}rgba(255,181,71,0.15){% elif b.status == 'fehler' %}rgba(255,77,77,0.15){% else %}transparent{% endif %};">
+      </div>
+
+      <div>
+        <div style="display:flex; align-items:center; gap:0.65rem; margin-bottom:0.25rem; flex-wrap:wrap;">
+          <span style="font-weight:600; color:var(--ink);">{{ b.lieferant or '(kein Lieferant)' }}</span>
+          {% if b.belegdatum %}
+          <span style="font-size:0.79rem; color:var(--ink-soft);">{{ b.belegdatum }}</span>
+          {% endif %}
+          <span class="badge {{ b.status or 'neu' }}">{{ b.status or 'neu' }}</span>
+          {% if b.mandant_id %}
+          <span class="badge neu" style="font-size:0.69rem;">{{ b.mandant_id }}</span>
+          {% endif %}
+        </div>
+        <div style="display:flex; gap:1.25rem; font-size:0.79rem; color:var(--ink-soft); flex-wrap:wrap;">
+          {% if b.rechnungsnummer %}
+          <span>RE: <span class="mono" style="color:var(--ink-mute);">{{ b.rechnungsnummer }}</span></span>
+          {% endif %}
+          {% if b.soll_konto %}
+          <span>Konto: <span class="mono" style="color:var(--orange);">{{ b.soll_konto }}</span></span>
+          {% endif %}
+          {% if b.buchungstext %}
+          <span style="max-width:320px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ b.buchungstext }}</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <div style="text-align:right; flex-shrink:0;">
+        <div style="font-weight:700; font-size:0.97rem; color:var(--ink); font-variant-numeric:tabular-nums; margin-bottom:0.45rem; white-space:nowrap;">
+          {{ "%.2f"|format(b.bruttobetrag or 0) }} €
+        </div>
+        <div style="display:flex; gap:0.35rem; justify-content:flex-end;">
+          {% if b.status == 'rueckfrage' %}
+          <a href="{{ url_for('beleg_detail', beleg_id=b.beleg_id) }}" class="btn btn-primary btn-sm">Prüfen</a>
+          {% else %}
+          <a href="{{ url_for('beleg_detail', beleg_id=b.beleg_id) }}" class="btn btn-ghost btn-sm">Details</a>
+          {% endif %}
+          <a href="{{ url_for('audit_detail', beleg_id=b.beleg_id) }}" class="btn btn-ghost btn-sm">Audit</a>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="surface" style="text-align:center; padding:3rem 2rem;">
+    <div style="font-size:2.25rem; margin-bottom:0.75rem; opacity:0.35;">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" style="display:inline;">
+        <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M21 21l-4.35-4.35" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <p style="font-size:1rem; font-weight:600; color:var(--ink); margin-bottom:0.4rem;">Keine Treffer</p>
+    <p style="font-size:0.875rem; color:var(--ink-dimmer);">Versuche einen anderen Begriff — Lieferant, RE-Nummer, Kontonummer oder Datum.</p>
+  </div>
+  {% endif %}
+
+{% else %}
+<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:1rem; margin-top:0.5rem;">
+  {% for label, examples, desc in [
+    ('Lieferant', 'Vodafone, Amazon, Telekom', 'Alle Belege eines Lieferanten auf einmal'),
+    ('RE-Nummer', 'INV-2024-001, RE-123', 'Gezielt nach Rechnungsnummer suchen'),
+    ('Kontonummer', '4920, 4830, 6300', 'Alle Buchungen auf einem Konto'),
+    ('Datum', '2026-01, 15.03.2026', 'Nach Belegdatum oder Monat filtern')
+  ] %}
+  <div class="surface surface-sm" style="text-align:center; padding:1.35rem 1rem;">
+    <div style="font-size:0.68rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--orange); margin-bottom:0.45rem;">{{ label }}</div>
+    <div class="mono" style="font-size:0.77rem; color:var(--ink-soft); margin-bottom:0.4rem;">{{ examples }}</div>
+    <div style="font-size:0.77rem; color:var(--ink-dimmer);">{{ desc }}</div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<script>
+(function() {
+  var input = document.getElementById('search-input');
+  var form = document.getElementById('search-form');
+  if (!input || !form) return;
+  var timer;
+  input.addEventListener('input', function() {
+    clearTimeout(timer);
+    var v = input.value.trim();
+    if (v.length >= 2) {
+      timer = setTimeout(function() { form.submit(); }, 500);
+    }
+  });
+})();
+</script>
+
+{% endblock %}

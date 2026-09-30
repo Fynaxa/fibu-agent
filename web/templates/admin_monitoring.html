@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}Monitoring – FiBu-Agent{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h1 class="page-title font-display">System-Monitoring</h1>
+  <p class="page-subtitle">Health-Checks, API-Kosten und Systemzustand</p>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card {{ 'green' if health.status == 'ok' else ('amber' if health.status == 'warning' else 'red') }}">
+    <div class="stat-number" style="font-size:1.4rem; letter-spacing:0.02em;">{{ health.status|upper }}</div>
+    <div class="stat-label">Systemstatus</div>
+  </div>
+  <div class="stat-card {{ 'green' if not daily.budget_exceeded else 'red' }}">
+    <div class="stat-number" style="font-size:1.6rem;">{{ "%.2f"|format(daily.total_eur) }} €</div>
+    <div class="stat-label">API-Kosten heute (Limit: {{ "%.2f"|format(daily.budget_eur) }} €)</div>
+  </div>
+  <div class="stat-card {{ 'green' if not monthly.budget_exceeded else 'red' }}">
+    <div class="stat-number" style="font-size:1.6rem;">{{ "%.2f"|format(monthly.total_eur) }} €</div>
+    <div class="stat-label">API-Kosten Monat (Limit: {{ "%.2f"|format(monthly.budget_eur) }} €)</div>
+  </div>
+  <div class="stat-card blue">
+    <div class="stat-number">{{ daily.calls }}</div>
+    <div class="stat-label">API-Calls heute</div>
+  </div>
+</div>
+
+<div class="surface">
+  <h2 class="section-title">Health-Checks</h2>
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Komponente</th>
+          <th>Status</th>
+          <th>Details</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for name, check in health.checks.items() %}
+        <tr>
+          <td style="font-weight:600; color:var(--ink);">{{ name }}</td>
+          <td>
+            {% if check.status == 'ok' %}
+            <span class="badge ok">OK</span>
+            {% elif check.status == 'warning' %}
+            <span class="badge warning">Warnung</span>
+            {% else %}
+            <span class="badge fehler">Fehler</span>
+            {% endif %}
+          </td>
+          <td class="mono" style="font-size:0.77rem; color:var(--ink-dimmer);">
+            {% for k, v in check.items() if k != 'status' %}
+            {{ k }}: {{ v }}<br>
+            {% endfor %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if daily.by_operation %}
+<div class="surface">
+  <h2 class="section-title">API-Kosten nach Vorgang (heute)</h2>
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Vorgang</th>
+          <th style="text-align:right;">Kosten</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for op, cost in daily.by_operation.items() %}
+        <tr>
+          <td style="color:var(--ink);">{{ op }}</td>
+          <td class="mono td-right">{{ "%.4f"|format(cost) }} €</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<div class="surface">
+  <h2 class="section-title">Auto-Scheduler</h2>
+  <div style="display:flex; flex-wrap:wrap; gap:2rem; font-size:0.875rem;">
+    <div>
+      <div style="font-size:0.75rem; font-weight:600; color:var(--ink-dimmer); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:0.3rem;">Status</div>
+      {% if scheduler.running %}
+      <span class="badge exportiert">Aktiv</span>
+      {% elif scheduler.active %}
+      <span class="badge warning">Konfiguriert, nicht gestartet</span>
+      {% else %}
+      <span class="badge neu">Inaktiv</span>
+      {% endif %}
+    </div>
+    <div>
+      <div style="font-size:0.75rem; font-weight:600; color:var(--ink-dimmer); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:0.3rem;">Tägliche Uhrzeit</div>
+      <span class="mono" style="color:var(--ink);">{{ scheduler.time }}</span>
+    </div>
+    <div>
+      <div style="font-size:0.75rem; font-weight:600; color:var(--ink-dimmer); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:0.3rem;">Nächster Run</div>
+      <span style="color:var(--ink);">{{ scheduler.next_run }}</span>
+    </div>
+    <div>
+      <div style="font-size:0.75rem; font-weight:600; color:var(--ink-dimmer); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:0.3rem;">Letzter Run</div>
+      <span style="color:var(--ink-dim);">{{ scheduler.last_run }}</span>
+    </div>
+  </div>
+  {% if not scheduler.active %}
+  <p style="margin-top:1rem; font-size:0.8rem; color:var(--ink-dimmer);">
+    Aktivieren: <span class="mono" style="color:var(--emerald);">PIPELINE_SCHEDULE_ACTIVE=true</span> und
+    <span class="mono" style="color:var(--emerald);">PIPELINE_SCHEDULE_TIME=18:00</span> in der <span class="mono">.env</span> setzen.
+  </p>
+  {% endif %}
+</div>
+
+<p style="font-size:0.78rem; color:var(--ink-dimmer);">
+  Health-Check-Endpoint für Docker/Load-Balancer: <span class="mono" style="color:var(--emerald);">GET /health</span> (kein Login erforderlich)
+</p>
+
+{% endblock %}

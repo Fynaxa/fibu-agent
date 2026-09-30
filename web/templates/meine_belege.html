@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Meine Belege – FiBu-Agent{% endblock %}
+{% block content %}
+
+<div class="page-header" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem;">
+  <div>
+    <h1 class="page-title font-display">Meine Belege</h1>
+    <p class="page-subtitle">{{ belege|length }} Beleg{{ 'e' if belege|length != 1 else '' }} verarbeitet</p>
+  </div>
+  <a href="{{ url_for('upload') }}" class="btn btn-primary btn-sm">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 16V8m0 0l-3 3m3-3 3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><rect x="3" y="16" width="18" height="5" rx="1" stroke="currentColor" stroke-width="2"/></svg>
+    Beleg hochladen
+  </a>
+</div>
+
+{# Status-Filter #}
+<div style="display:flex; gap:0.5rem; margin-bottom:1.5rem; flex-wrap:wrap;">
+  {% for s, label in [('', 'Alle'), ('exportiert', 'Exportiert'), ('validiert', 'Freigegeben'), ('rueckfrage', 'Rückfragen'), ('fehler', 'Fehler')] %}
+  <a href="{{ url_for('meine_belege', status=s) }}"
+     style="display:inline-flex; align-items:center; padding:0.3rem 0.85rem; border-radius:99px; font-size:0.78rem; font-weight:600; text-decoration:none; transition:all 0.15s;
+       {% if status_filter == s %}background:rgba(255,107,53,0.15); color:var(--orange); border:1px solid rgba(255,107,53,0.35);
+       {% else %}background:rgba(255,255,255,0.04); color:var(--ink-dim); border:1px solid rgba(255,255,255,0.08);{% endif %}">
+    {{ label }}
+    {% if s %}
+      <span style="margin-left:0.4rem; font-size:0.7rem; opacity:0.7;">{{ belege|selectattr('status','equalto',s)|list|length if status_filter == '' else belege|length }}</span>
+    {% endif %}
+  </a>
+  {% endfor %}
+</div>
+
+{% if belege %}
+<div class="surface" style="padding:0; overflow:hidden;">
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Lieferant</th>
+          <th>Datum</th>
+          <th class="td-right">Betrag</th>
+          <th>Konto</th>
+          <th>Methode</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for b in belege %}
+        <tr style="cursor:pointer;" onclick="window.location='{{ url_for('beleg_detail', beleg_id=b.beleg_id) }}'">
+          <td>
+            <div style="font-weight:600; color:var(--ink);">{{ b.lieferant or '–' }}</div>
+            <div style="font-size:0.72rem; color:var(--ink-dimmer); font-family:'SF Mono',monospace; margin-top:0.1rem;">{{ b.dateiname or '' }}</div>
+          </td>
+          <td style="font-size:0.85rem; white-space:nowrap;">{{ b.belegdatum or '–' }}</td>
+          <td class="td-right" style="font-variant-numeric:tabular-nums; font-weight:700; color:var(--ink); white-space:nowrap;">
+            {{ "%.2f"|format(b.bruttobetrag or 0) }} €
+          </td>
+          <td>
+            {% if b.soll_konto %}
+            <span class="mono" style="font-size:0.82rem; color:var(--orange);">{{ b.soll_konto }}</span>
+            <span style="font-size:0.75rem; color:var(--ink-dimmer);"> / {{ b.haben_konto or '1200' }}</span>
+            {% else %}
+            <span style="color:var(--ink-dimmer);">–</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if b.kontierung_methode == 'vendor_cache' %}
+            <span class="badge validiert" style="font-size:0.68rem;">Cache</span>
+            {% elif b.kontierung_methode == 'regel' %}
+            <span class="badge exportiert" style="font-size:0.68rem;">Regel</span>
+            {% elif b.kontierung_methode == 'llm' %}
+            <span class="badge kontiert" style="font-size:0.68rem;">KI</span>
+            {% endif %}
+          </td>
+          <td>
+            <span class="badge {{ b.status or 'neu' }}">{{ b.status or 'neu' }}</span>
+          </td>
+          <td onclick="event.stopPropagation();">
+            <a href="{{ url_for('beleg_detail', beleg_id=b.beleg_id) }}" class="btn btn-ghost btn-sm">
+              Details →
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% else %}
+<div class="surface">
+  <div class="empty-state" style="padding:3rem; text-align:center;">
+    <div style="font-size:2.5rem; margin-bottom:1rem; opacity:0.3;">📄</div>
+    <div style="font-weight:600; color:var(--ink); margin-bottom:0.5rem;">Noch keine Belege verarbeitet</div>
+    <div style="font-size:0.85rem; color:var(--ink-dim); margin-bottom:1.5rem;">Lade eine Rechnung hoch und starte die Pipeline — die KI kontiert sie automatisch.</div>
+    <a href="{{ url_for('upload') }}" class="btn btn-primary">Ersten Beleg hochladen</a>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

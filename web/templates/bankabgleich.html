@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block title %}Bankabgleich – FiBu-Agent{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h1 class="page-title">Bankabgleich</h1>
+  <p class="page-subtitle">MT940 + CAMT.053 Import — automatischer Abgleich gegen Belege</p>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card amber">
+    <div class="stat-number">{{ offene|length }}</div>
+    <div class="stat-label">Nicht abgeglichen</div>
+  </div>
+  <div class="stat-card green">
+    <div class="stat-number">{{ transaktionen|selectattr('abgeglichen','equalto',1)|list|length }}</div>
+    <div class="stat-label">Abgeglichen</div>
+  </div>
+  <div class="stat-card blue">
+    <div class="stat-number">{{ transaktionen|length }}</div>
+    <div class="stat-label">Transaktionen gesamt</div>
+  </div>
+</div>
+
+{# Upload + Abgleich #}
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem;">
+  <div class="surface accent-strip">
+    <h2 class="section-title">Kontoauszug importieren</h2>
+    <p class="text-dim" style="margin-bottom:1rem;font-size:0.875rem;">MT940 (.sta/.txt) oder CAMT.053 (.xml) — automatische Erkennung</p>
+    <form method="post" action="{{ url_for('bankabgleich_upload') }}" enctype="multipart/form-data">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div style="margin-bottom:0.75rem;">
+        <label class="form-label">Mandant</label>
+        <select name="mandant_id" class="form-select">
+          <option value="">Global</option>
+          {% for m in mandanten %}<option value="{{ m.id }}" {% if aktueller_mandant == m.id %}selected{% endif %}>{{ m.name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div style="margin-bottom:1rem;">
+        <label class="form-label">Datei</label>
+        <input type="file" name="kontoauszug" class="form-input" accept=".sta,.txt,.xml,.mt940,.camt" required>
+      </div>
+      <button type="submit" class="btn btn-primary">Importieren</button>
+    </form>
+  </div>
+
+  <div class="surface accent-strip a2">
+    <h2 class="section-title">Automatischer Abgleich</h2>
+    <p class="text-dim" style="margin-bottom:1rem;font-size:0.875rem;">
+      Versucht offene Transaktionen automatisch mit kontiertenBelegen abzugleichen (Betrag + RE-Nummer + Lieferant).
+    </p>
+    <form method="post" action="{{ url_for('bankabgleich_run') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div style="margin-bottom:1rem;">
+        <label class="form-label">Mandant</label>
+        <select name="mandant_id" class="form-select">
+          <option value="">Alle</option>
+          {% for m in mandanten %}<option value="{{ m.id }}" {% if aktueller_mandant == m.id %}selected{% endif %}>{{ m.name }}</option>{% endfor %}
+        </select>
+      </div>
+      <button type="submit" class="btn btn-primary">Abgleich starten</button>
+    </form>
+  </div>
+</div>
+
+{# Offene Transaktionen #}
+{% if offene %}
+<div class="surface" style="margin-bottom:1.5rem;">
+  <h2 class="section-title">Nicht abgeglichene Transaktionen</h2>
+  <table class="data-table">
+    <thead><tr><th>Datum</th><th>Betrag</th><th>Richtung</th><th>Verwendungszweck</th><th>Gegenpartei</th><th>Typ</th></tr></thead>
+    <tbody>
+      {% for tx in offene %}
+      <tr>
+        <td class="mono">{{ tx.datum }}</td>
+        <td style="font-weight:700;{% if tx.richtung == 'CREDIT' %}color:var(--green){% else %}color:var(--red){% endif %}">
+          {% if tx.richtung == 'DEBIT' %}–{% endif %}{{ "%.2f"|format(tx.betrag) }} {{ tx.waehrung }}
+        </td>
+        <td><span class="badge {% if tx.richtung == 'CREDIT' %}badge-green{% else %}badge-red{% endif %}">{{ tx.richtung }}</span></td>
+        <td class="text-dim" style="max-width:300px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ tx.verwendungszweck or "–" }}</td>
+        <td class="text-dim">{{ tx.gegenpartei or "–" }}</td>
+        <td class="mono">{{ tx.datei_typ or "–" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{# Alle Transaktionen / Empty State #}
+<div class="surface">
+  <h2 class="section-title">Letzte 50 Transaktionen</h2>
+  {% if transaktionen %}
+  <table class="data-table">
+    <thead><tr><th>Datum</th><th>Betrag</th><th>Verwendungszweck</th><th>Abgeglichen</th></tr></thead>
+    <tbody>
+      {% for tx in transaktionen %}
+      <tr>
+        <td class="mono">{{ tx.datum }}</td>
+        <td style="font-weight:600;{% if tx.richtung == 'CREDIT' %}color:var(--green){% else %}color:var(--red){% endif %}">
+          {% if tx.richtung == 'DEBIT' %}–{% endif %}{{ "%.2f"|format(tx.betrag) }} {{ tx.waehrung }}
+        </td>
+        <td class="text-dim" style="max-width:350px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ tx.verwendungszweck or "–" }}</td>
+        <td>
+          {% if tx.abgeglichen %}<span class="badge badge-green">✓ {{ tx.beleg_id[:8] if tx.beleg_id else "" }}</span>
+          {% else %}<span class="badge badge-red">Offen</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  {# Feature explanation for empty state #}
+  <div style="padding:0.5rem 0 1.5rem;">
+    <div style="text-align:center; margin-bottom:2rem;">
+      <div style="width:56px; height:56px; background:rgba(255,107,53,0.08); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 0.85rem; font-size:1.5rem;">🏦</div>
+      <p style="font-size:1rem; font-weight:600; color:var(--ink); margin-bottom:0.35rem;">Noch keine Transaktionen importiert</p>
+      <p style="font-size:0.875rem; color:var(--ink-dimmer);">Importiere einen Kontoauszug links und starte dann den automatischen Abgleich.</p>
+    </div>
+
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:1rem;">
+      <div style="background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.07); border-radius:14px; padding:1.1rem;">
+        <div style="font-size:0.7rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--orange); margin-bottom:0.45rem;">① MT940 / CAMT</div>
+        <div style="font-size:0.83rem; color:var(--ink-mute); line-height:1.55;">Kontoauszüge im MT940-Format (.sta) oder CAMT.053 (.xml) werden automatisch erkannt — direkt aus dem Online-Banking exportieren.</div>
+      </div>
+      <div style="background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.07); border-radius:14px; padding:1.1rem;">
+        <div style="font-size:0.7rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--orange); margin-bottom:0.45rem;">② Automatischer Abgleich</div>
+        <div style="font-size:0.83rem; color:var(--ink-mute); line-height:1.55;">Betrag, Rechnungsnummer und Lieferant werden automatisch verglichen — passt alles, wird der Beleg sofort zugeordnet.</div>
+      </div>
+      <div style="background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.07); border-radius:14px; padding:1.1rem;">
+        <div style="font-size:0.7rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--orange); margin-bottom:0.45rem;">③ Lückenloser Nachweis</div>
+        <div style="font-size:0.83rem; color:var(--ink-mute); line-height:1.55;">Jede abgeglichene Transaktion erhält einen Beleg-Link — der GoBD-konforme Nachweis ist vollständig und revisionssicher.</div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}

@@ -1,0 +1,272 @@
+{% extends "base.html" %}
+{% block title %}Multi-Entity — FiBu-Agent{% endblock %}
+{% block content %}
+
+<style>
+.me-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+@media (max-width: 640px) {
+  .me-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .me-stats-grid .stat-card:last-child {
+    grid-column: 1 / -1;
+  }
+}
+@media (min-width: 641px) and (max-width: 900px) {
+  .me-stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+</style>
+
+<div class="page-header">
+  <h1 class="page-title font-display">Multi-Entity Übersicht</h1>
+  <p class="page-subtitle">Alle Belege aller Gesellschaften — eine Ansicht, ein Überblick</p>
+</div>
+
+<!-- STATS GESAMT -->
+<div class="me-stats-grid">
+  <div class="stat-card blue">
+    <div class="stat-number">{{ total }}</div>
+    <div class="stat-label">Belege gesamt</div>
+  </div>
+  <div class="stat-card green">
+    <div class="stat-number">{{ exportiert }}</div>
+    <div class="stat-label">Exportiert</div>
+  </div>
+  <div class="stat-card amber">
+    <div class="stat-number">{{ rueckfragen|length }}</div>
+    <div class="stat-label">Rückfragen</div>
+  </div>
+  <div class="stat-card red">
+    <div class="stat-number">{{ fehler }}</div>
+    <div class="stat-label">Fehler</div>
+  </div>
+  <div class="stat-card" style="border-color:rgba(167,243,208,0.18);">
+    <div class="stat-number" style="color:var(--mint);">{{ mandanten|length }}</div>
+    <div class="stat-label">Gesellschaften</div>
+  </div>
+</div>
+
+<!-- MANDANTEN-STATUS-KARTEN -->
+{% if mandant_stats %}
+<div class="surface accent-strip" style="margin-bottom:1.5rem;">
+  <h2 class="section-title">Status je Gesellschaft</h2>
+  <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap:0.75rem;">
+    {% for ms in mandant_stats %}
+    <a href="{{ url_for('mandant_detail', mandant_id=ms.id) }}"
+       style="text-decoration:none; display:block;
+              background:rgba(10,31,26,0.5); border:1px solid rgba(167,243,208,0.12);
+              border-radius:14px; padding:1rem 1.1rem;
+              transition:border-color 0.2s, background 0.2s;"
+       onmouseover="this.style.borderColor='rgba(45,212,168,0.3)'; this.style.background='rgba(45,212,168,0.04)'"
+       onmouseout="this.style.borderColor='rgba(167,243,208,0.12)'; this.style.background='rgba(10,31,26,0.5)'">
+      <div style="font-weight:600; color:var(--ink); font-size:0.875rem; margin-bottom:0.5rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+        {{ ms.name }}
+      </div>
+      <div style="font-size:0.72rem; color:var(--ink-dimmer); margin-bottom:0.6rem; font-family:'SF Mono',ui-monospace,monospace;">{{ ms.id }}</div>
+      <div style="display:flex; gap:0.4rem; flex-wrap:wrap;">
+        <span class="badge exportiert">{{ ms.exportiert }} exportiert</span>
+        {% if ms.rueckfragen > 0 %}<span class="badge rueckfrage">{{ ms.rueckfragen }} Rückfragen</span>{% endif %}
+        {% if ms.fehler > 0 %}<span class="badge fehler">{{ ms.fehler }} Fehler</span>{% endif %}
+        {% if ms.offen > 0 %}<span class="badge neu">{{ ms.offen }} offen</span>{% endif %}
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- FILTER + SUCHE -->
+<div class="surface surface-sm" style="margin-bottom:1rem; padding:1rem 1.25rem;">
+  <div style="display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap;">
+    <div style="display:flex; align-items:center; gap:0.5rem; flex:1; min-width:180px;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="color:var(--ink-dimmer); flex-shrink:0;">
+        <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/>
+        <path d="m21 21-4.35-4.35" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <input type="text" id="search-input" placeholder="Lieferant, Beleg-ID, Konto …"
+             class="form-input" style="border-radius:8px; padding:0.45rem 0.75rem; font-size:0.825rem;">
+    </div>
+    <select id="filter-mandant" class="form-select" style="width:auto; min-width:160px; padding:0.45rem 0.75rem; font-size:0.825rem; border-radius:8px;">
+      <option value="">Alle Gesellschaften</option>
+      {% for m in mandanten %}
+      <option value="{{ m.id }}">{{ m.name }}</option>
+      {% endfor %}
+    </select>
+    <select id="filter-status" class="form-select" style="width:auto; min-width:130px; padding:0.45rem 0.75rem; font-size:0.825rem; border-radius:8px;">
+      <option value="">Alle Status</option>
+      <option value="exportiert">Exportiert</option>
+      <option value="rueckfrage">Rückfrage</option>
+      <option value="fehler">Fehler</option>
+      <option value="neu">Neu</option>
+      <option value="kontiert">Kontiert</option>
+    </select>
+    <span id="filter-count" style="font-size:0.78rem; color:var(--ink-dimmer); white-space:nowrap;">
+      {{ alle_belege|length }} Belege
+    </span>
+  </div>
+</div>
+
+<!-- BELEGE-TABELLE -->
+<div class="surface">
+  {% if alle_belege %}
+  <div class="tbl-wrap">
+    <table id="belege-table">
+      <thead>
+        <tr>
+          <th>Gesellschaft</th>
+          <th>Beleg-ID</th>
+          <th>Lieferant</th>
+          <th>Datum</th>
+          <th class="td-right">Betrag</th>
+          <th>Konto</th>
+          <th>Methode</th>
+          <th>Status</th>
+          <th>Freigabe</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for b in alle_belege %}
+        <tr class="beleg-row"
+            data-mandant="{{ b._mandant_id }}"
+            data-status="{{ b.get('status', 'neu') }}"
+            data-search="{{ (b.get('lieferant','') ~ ' ' ~ b.get('beleg_id','') ~ ' ' ~ b.get('soll_konto','') ~ ' ' ~ b.get('haben_konto',''))|lower }}">
+          <td>
+            <a href="{{ url_for('mandant_detail', mandant_id=b._mandant_id) }}"
+               style="color:var(--emerald); text-decoration:none; font-weight:500; font-size:0.82rem;"
+               onmouseover="this.style.textDecoration='underline'"
+               onmouseout="this.style.textDecoration='none'">
+              {{ b._mandant_name }}
+            </a>
+            <div style="font-size:0.7rem; color:var(--ink-dimmer); font-family:'SF Mono',ui-monospace,monospace;">{{ b._mandant_id }}</div>
+          </td>
+          <td class="mono" style="font-size:0.77rem;">{{ b.get('beleg_id', '?')[:12] }}</td>
+          <td style="font-weight:500; color:var(--ink);">{{ b.get('lieferant', '–') }}</td>
+          <td style="font-size:0.82rem;">{{ b.get('belegdatum', '–') }}</td>
+          <td class="td-right" style="font-variant-numeric:tabular-nums;">
+            {{ "%.2f"|format(b.get('bruttobetrag', 0)) }} €
+          </td>
+          <td class="mono" style="font-size:0.77rem; color:var(--ink-dim);">
+            {{ b.get('soll_konto', '?') }}/{{ b.get('haben_konto', '?') }}
+          </td>
+          <td>
+            {% if b.get('kontierung_methode') == 'llm' %}
+            <span class="badge kontiert">LLM</span>
+            {% elif b.get('kontierung_methode') == 'regel' %}
+            <span class="badge exportiert">Regel</span>
+            {% endif %}
+          </td>
+          <td>
+            <span class="badge {{ b.get('status', 'neu') }}">{{ b.get('status', 'neu') }}</span>
+          </td>
+          <td>
+            {% if b.get('status') in ('validiert', 'kontiert') and b.get('soll_konto') %}
+            <button class="btn btn-primary btn-sm freigeben-btn"
+                    data-beleg-id="{{ b.get('beleg_id') }}"
+                    style="white-space:nowrap;">
+              ✓ Freigeben
+            </button>
+            {% elif b.get('status') == 'exportiert' %}
+            <span style="color:var(--green); font-size:0.82rem; font-weight:600;">✓ Freigegeben</span>
+            {% else %}
+            <span style="color:var(--ink-dimmer); font-size:0.78rem;">–</span>
+            {% endif %}
+          </td>
+          <td>
+            <a href="{{ url_for('audit_detail', beleg_id=b.get('beleg_id', '')) }}"
+               class="btn btn-ghost btn-sm">Audit</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div id="empty-filter" style="display:none; text-align:center; padding:2rem; color:var(--ink-dimmer); font-size:0.875rem;">
+    Keine Belege für diesen Filter.
+  </div>
+  {% else %}
+  <div class="empty-state">
+    Noch keine Belege verarbeitet.
+    <br><a href="{{ url_for('upload') }}" style="color:var(--emerald); text-decoration:none; font-weight:600;">Belege hochladen →</a>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+  const searchInput   = document.getElementById('search-input');
+  const filterMandant = document.getElementById('filter-mandant');
+  const filterStatus  = document.getElementById('filter-status');
+  const countEl       = document.getElementById('filter-count');
+  const emptyEl       = document.getElementById('empty-filter');
+  const rows          = document.querySelectorAll('.beleg-row');
+
+  function applyFilter() {
+    const q  = searchInput.value.toLowerCase().trim();
+    const m  = filterMandant.value;
+    const s  = filterStatus.value;
+    let visible = 0;
+
+    rows.forEach(function(row) {
+      const matchSearch  = !q || row.dataset.search.includes(q);
+      const matchMandant = !m || row.dataset.mandant === m;
+      const matchStatus  = !s || row.dataset.status === s;
+      const show = matchSearch && matchMandant && matchStatus;
+      row.style.display = show ? '' : 'none';
+      if (show) visible++;
+    });
+
+    countEl.textContent = visible + ' Belege';
+    emptyEl.style.display = (visible === 0 && rows.length > 0) ? 'block' : 'none';
+  }
+
+  searchInput.addEventListener('input', applyFilter);
+  filterMandant.addEventListener('change', applyFilter);
+  filterStatus.addEventListener('change', applyFilter);
+})();
+
+// Freigeben per AJAX
+document.querySelectorAll('.freigeben-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    const belegId = btn.dataset.belegId;
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    btn.disabled = true;
+    btn.textContent = '…';
+    fetch('/beleg/' + belegId + '/freigeben', {
+      method: 'POST',
+      headers: { 'X-CSRFToken': csrfToken, 'Content-Type': 'application/json' }
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.ok) {
+        btn.outerHTML = '<span style="color:var(--green); font-size:0.82rem; font-weight:600;">✓ Freigegeben</span>';
+        // Badge in selber Zeile aktualisieren
+        const row = btn.closest ? btn.closest('tr') : null;
+        if (row) {
+          const badge = row.querySelector('.badge');
+          if (badge) { badge.className = 'badge exportiert'; badge.textContent = 'exportiert'; }
+        }
+      } else {
+        btn.disabled = false;
+        btn.textContent = '✓ Freigeben';
+        alert(data.error || 'Fehler beim Freigeben.');
+      }
+    })
+    .catch(function() {
+      btn.disabled = false;
+      btn.textContent = '✓ Freigeben';
+    });
+  });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% block title %}Mandant onboarden – FiBu-Agent{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h1 class="page-title font-display">Neuen Mandanten onboarden</h1>
+  <p class="page-subtitle">Kanzleiname und E-Mail eintragen — der Rest läuft automatisch.</p>
+</div>
+
+{% if result %}
+{# ── Erfolgs-Übersicht ─────────────────────────────── #}
+<div class="surface accent-strip" style="max-width:640px;">
+  <h2 class="section-title" style="color:var(--emerald);">
+    ✓ Mandant erfolgreich ongeboardet
+  </h2>
+  <p style="font-size:0.85rem;color:var(--ink-dimmer);margin-bottom:1.5rem;">
+    Alle Zugangsdaten wurden generiert.
+    {% if result.email_sent %}
+      Die Welcome-E-Mail wurde an <strong style="color:var(--ink);">{{ result.to_email }}</strong> gesendet.
+    {% else %}
+      Kopiere die Zugangsdaten und leite sie manuell weiter.
+    {% endif %}
+  </p>
+
+  <div style="display:grid;gap:0.75rem;margin-bottom:1.5rem;">
+
+    <div style="background:rgba(45,212,168,0.06);border:1px solid rgba(167,243,208,0.15);border-radius:10px;padding:16px 20px;">
+      <p style="margin:0 0 3px;font-size:11px;color:var(--ink-dimmer);text-transform:uppercase;letter-spacing:0.05em;">Login-URL</p>
+      <a href="{{ result.login_url }}" target="_blank"
+         style="font-size:15px;font-weight:600;color:var(--emerald);text-decoration:none;word-break:break-all;">{{ result.login_url }}</a>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+      <div style="background:rgba(45,212,168,0.06);border:1px solid rgba(167,243,208,0.15);border-radius:10px;padding:14px 18px;">
+        <p style="margin:0 0 3px;font-size:11px;color:var(--ink-dimmer);text-transform:uppercase;letter-spacing:0.05em;">Benutzername</p>
+        <p style="margin:0;font-size:15px;font-weight:700;color:var(--ink);font-family:monospace;">{{ result.username }}</p>
+      </div>
+      <div style="background:rgba(45,212,168,0.06);border:1px solid rgba(167,243,208,0.15);border-radius:10px;padding:14px 18px;">
+        <p style="margin:0 0 3px;font-size:11px;color:var(--ink-dimmer);text-transform:uppercase;letter-spacing:0.05em;">Passwort</p>
+        <p style="margin:0;font-size:15px;font-weight:700;color:var(--ink);font-family:monospace;">{{ result.password }}</p>
+      </div>
+    </div>
+
+    <div style="background:rgba(45,212,168,0.10);border:1px solid rgba(167,243,208,0.25);border-radius:10px;padding:16px 20px;">
+      <p style="margin:0 0 3px;font-size:11px;color:var(--ink-dimmer);text-transform:uppercase;letter-spacing:0.05em;">Beleg-E-Mail-Adresse (für Mandanten)</p>
+      <p style="margin:4px 0 6px;font-size:17px;font-weight:800;color:var(--emerald);font-family:monospace;">{{ result.plus_address }}</p>
+      <p style="margin:0;font-size:12px;color:var(--ink-dimmer);">PDFs und Rechnungen als Anhang an diese Adresse schicken → automatische Verarbeitung.</p>
+    </div>
+
+    <div style="background:rgba(45,212,168,0.06);border:1px solid rgba(167,243,208,0.15);border-radius:10px;padding:14px 18px;">
+      <p style="margin:0 0 3px;font-size:11px;color:var(--ink-dimmer);text-transform:uppercase;letter-spacing:0.05em;">Mandanten-ID</p>
+      <p style="margin:0;font-size:15px;font-weight:700;color:var(--ink);font-family:monospace;">{{ result.mandant_id }}</p>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+    <a href="{{ url_for('admin_onboarding') }}" class="btn btn-primary">Weiteren Mandanten onboarden</a>
+    <a href="{{ url_for('admin_mandanten') }}" class="btn btn-ghost">Alle Mandanten ansehen</a>
+  </div>
+</div>
+
+{% else %}
+{# ── Formular ─────────────────────────────────────── #}
+<form method="POST" action="{{ url_for('admin_onboarding') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+  <div class="surface" style="max-width:640px;">
+    <h2 class="section-title">
+      <span style="color:var(--emerald);margin-right:0.5rem;">🏢</span>
+      Kanzlei-Daten
+    </h2>
+
+    <div class="form-grid" style="margin-bottom:1.25rem;">
+      <div class="form-group" style="grid-column:1/-1;">
+        <label class="form-label" for="kanzlei_name">Kanzleiname / Firmenname <span style="color:var(--emerald);">*</span></label>
+        <input class="form-input" type="text" name="kanzlei_name" id="kanzlei_name"
+               placeholder="z.B. Steuerkanzlei Muster" required autofocus
+               oninput="updateSlug(this.value)">
+      </div>
+
+      <div class="form-group" style="grid-column:1/-1;">
+        <label class="form-label" for="email">E-Mail-Adresse des Mandanten <span style="color:var(--emerald);">*</span></label>
+        <input class="form-input" type="email" name="email" id="email"
+               placeholder="info@musterkanzlei.de" required>
+        <span class="form-hint">Hierhin geht die Welcome-E-Mail und der Tages-Report.</span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="mandant_id">Mandanten-ID</label>
+        <input class="form-input mono" type="text" name="mandant_id" id="mandant_id"
+               placeholder="MUSTER" maxlength="10"
+               style="text-transform:uppercase;"
+               oninput="this.value=this.value.toUpperCase()">
+        <span class="form-hint">Wird automatisch aus dem Namen generiert. Nur A–Z, 0–9.</span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="kontenrahmen">Kontenrahmen</label>
+        <select class="form-input" name="kontenrahmen" id="kontenrahmen">
+          <option value="SKR03">SKR03</option>
+          <option value="SKR04">SKR04</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="berater_nr">DATEV Beraternummer</label>
+        <input class="form-input" type="text" name="berater_nr" id="berater_nr"
+               placeholder="12345">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="mandant_nr">DATEV Mandantennummer</label>
+        <input class="form-input" type="text" name="mandant_nr" id="mandant_nr"
+               placeholder="67890">
+      </div>
+    </div>
+
+    <div style="padding:14px 18px;background:rgba(45,212,168,0.06);border:1px solid rgba(167,243,208,0.15);border-radius:10px;margin-bottom:1.25rem;">
+      <label style="display:flex;align-items:flex-start;gap:0.75rem;cursor:pointer;">
+        <input type="checkbox" name="send_welcome_email" value="1"
+               {% if imap_configured %}checked{% endif %}
+               style="margin-top:3px;accent-color:var(--emerald);">
+        <span>
+          <strong style="font-size:0.9rem;color:var(--ink);">Welcome-E-Mail automatisch senden</strong><br>
+          <span style="font-size:0.82rem;color:var(--ink-dimmer);">
+            {% if imap_configured %}
+              SMTP ist konfiguriert — Mandant erhält Login-Daten + Beleg-Adresse per E-Mail.
+            {% else %}
+              SMTP noch nicht konfiguriert →
+              <a href="{{ url_for('admin_settings') }}" style="color:var(--emerald);text-decoration:none;">Einstellungen →</a>
+            {% endif %}
+          </span>
+        </span>
+      </label>
+    </div>
+
+    <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">
+      Mandant onboarden &amp; Zugangsdaten generieren
+    </button>
+  </div>
+</form>
+{% endif %}
+
+<script>
+function updateSlug(name) {
+  const field = document.getElementById('mandant_id');
+  if (field.dataset.manual) return;
+  const slug = name.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10);
+  field.value = slug;
+}
+document.getElementById('mandant_id').addEventListener('input', function() {
+  this.dataset.manual = '1';
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Datenschutz – FiBu-Agent{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title font-display">Datenschutzerklärung</h1>
+</div>
+
+<div class="surface" style="max-width:700px;">
+
+    <h2>1. Verantwortlicher</h2>
+    <p style="margin-bottom:1rem;">
+        KI-Automation-Agency<br>
+        Inhaber: Konstantin Konradi<br>
+        Buchenkamp 22, 38159 Vechelde<br>
+        E-Mail: info@fynaxa.de<br>
+        Datenschutzbeauftragter: Konstantin Konradi, info@fynaxa.de
+    </p>
+
+    <h2>2. Verarbeitete Daten</h2>
+    <p style="margin-bottom:0.5rem;">Bei der Nutzung des FiBu-Agents werden folgende Daten verarbeitet:</p>
+    <ul style="font-size:0.85rem; padding-left:1.2rem; margin-bottom:1rem; line-height:1.8;">
+        <li><strong>Zugangsdaten:</strong> Benutzername, Passwort (als bcrypt-Hash gespeichert)</li>
+        <li><strong>Sitzungsdaten:</strong> Session-Cookie (technisch notwendig, keine Tracking-Cookies)</li>
+        <li><strong>Belegdaten:</strong> Rechnungsbeträge, Lieferantennamen, Adressen, IBAN, Ansprechpartner</li>
+        <li><strong>Buchungsdaten:</strong> Kontierungsergebnis, DATEV-Export, Audit-Trail</li>
+    </ul>
+
+    <h2>3. Zweck der Verarbeitung</h2>
+    <ul style="font-size:0.85rem; padding-left:1.2rem; margin-bottom:1rem; line-height:1.8;">
+        <li>Durchführung der KI-gestützten Belegverarbeitung (OCR, Kontierung, Export)</li>
+        <li>GoBD-konforme Protokollierung und Archivierung</li>
+        <li>Zugriffskontrolle und Systemsicherheit</li>
+    </ul>
+
+    <h2>4. Drittanbieter</h2>
+    <div style="padding:1rem; background:rgba(45,212,168,0.06); border:1px solid rgba(45,212,168,0.15); border-radius:10px; margin-bottom:1rem; font-size:0.85rem; color:var(--ink-dim);">
+        <strong>Anthropic, Inc.</strong> (San Francisco, USA)<br>
+        Zweck: OCR-Texterkennung auf Belegbildern via Claude API<br>
+        Absicherung: EU-Standardvertragsklauseln (Art. 46 Abs. 2 lit. c DSGVO)<br>
+        Anthropic verwendet API-Daten nicht für KI-Training.
+    </div>
+
+    <h2>5. Datensicherheit</h2>
+    <ul style="font-size:0.85rem; padding-left:1.2rem; margin-bottom:1rem; line-height:1.8;">
+        <li>Sensible Felder (IBAN, E-Mail, Telefon) mit AES-128 verschlüsselt</li>
+        <li>Alle Verbindungen über HTTPS/TLS 1.2+</li>
+        <li>Rollenbasierte Zugriffskontrolle mit Mandantentrennung</li>
+        <li>Manipulationssicherer Audit-Trail (SHA-256-Hash-Kette)</li>
+    </ul>
+
+    <h2>6. Speicherdauer</h2>
+    <table style="margin-bottom:1rem;">
+        <tr><td style="padding-right:2rem; font-size:0.85rem;">Buchungsbelege & Exporte</td><td style="font-size:0.85rem;">10 Jahre (§ 147 AO)</td></tr>
+        <tr><td style="padding-right:2rem; font-size:0.85rem;">Audit-Logs</td><td style="font-size:0.85rem;">10 Jahre (GoBD)</td></tr>
+        <tr><td style="padding-right:2rem; font-size:0.85rem;">Benutzerdaten</td><td style="font-size:0.85rem;">Vertragsdauer + 3 Monate</td></tr>
+        <tr><td style="padding-right:2rem; font-size:0.85rem;">Temporäre OCR-Daten</td><td style="font-size:0.85rem;">Max. 24 Stunden</td></tr>
+    </table>
+
+    <h2>7. Ihre Rechte</h2>
+    <p style="font-size:0.85rem; margin-bottom:1rem;">
+        Sie haben das Recht auf Auskunft (Art. 15), Berichtigung (Art. 16), Löschung (Art. 17),
+        Einschränkung (Art. 18), Datenübertragbarkeit (Art. 20) und Widerspruch (Art. 21 DSGVO).
+        Kontakt: info@fynaxa.de
+    </p>
+
+    <h2>8. Cookies</h2>
+    <p style="font-size:0.85rem; margin-bottom:1rem;">
+        Es werden ausschließlich <strong>technisch notwendige Session-Cookies</strong> verwendet.
+        Tracking-, Analyse- oder Werbe-Cookies werden nicht eingesetzt.
+    </p>
+
+    <h2>9. Aufsichtsbehörde</h2>
+    <p style="font-size:0.85rem;">
+        Sie haben das Recht, sich bei der zuständigen Datenschutz-Aufsichtsbehörde zu beschweren.
+    </p>
+</div>
+
+<a href="{{ url_for('dashboard') }}" class="btn btn-ghost" style="margin-top:1rem;">← Zurück</a>
+{% endblock %}

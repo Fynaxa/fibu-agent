@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+{% block title %}Dashboard – FiBu-Agent{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h1 class="page-title font-display">Dashboard</h1>
+  <p class="page-subtitle">Übersicht aller Belege und laufenden Prozesse</p>
+</div>
+
+{% if current_user and current_user.role == 'admin' %}
+<div class="surface" style="border-color:rgba(255,107,53,0.18); background:rgba(255,107,53,0.03); margin-bottom:1.25rem; padding:0.85rem 1.1rem;">
+  <div style="display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap;">
+    <div>
+      <span style="font-size:0.68rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:rgba(255,107,53,0.6);">Admin · Demo-Reset</span>
+      <p style="font-size:0.8rem; color:var(--ink-dim); margin:0.2rem 0 0;">Löscht DEMO-Belege aus DB und legt 6 frische Rechnungen in die Inbox — für Live-Demos.</p>
+    </div>
+    <form method="POST" action="{{ url_for('admin_demo_reset') }}"
+          onsubmit="return confirm('DEMO-Account zurücksetzen? Alle DEMO-Buchungen werden gelöscht.')">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn-ghost btn-sm"
+              style="color:var(--orange); border-color:rgba(255,107,53,0.3); white-space:nowrap;">
+        ↺ Demo zurücksetzen
+      </button>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+<div class="surface" style="border:1px solid rgba(255,107,53,0.25); background:rgba(255,107,53,0.04); margin-bottom:1.25rem;">
+  <div style="display:flex; gap:1.25rem; align-items:flex-start; flex-wrap:wrap;">
+    <div style="font-size:2rem; line-height:1; padding-top:0.1rem;">▶</div>
+    <div style="flex:1; min-width:220px;">
+      <div style="font-size:0.7rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--orange); margin-bottom:0.35rem;">So funktioniert der FiBu-Agent</div>
+      <div style="font-size:0.95rem; font-weight:600; color:var(--ink); margin-bottom:0.6rem;">
+        {% if inbox_count > 0 %}{{ inbox_count }} Beleg{{ 'e' if inbox_count != 1 else '' }} bereit — Pipeline jetzt starten{% else %}Belege hochladen und Pipeline starten{% endif %}
+      </div>
+      <ol style="font-size:0.82rem; color:var(--ink-soft); line-height:2; padding-left:1.1rem; margin:0;">
+        <li>Belege hochladen (PDF, PNG, JPG) → Gesellschaft zuweisen</li>
+        <li>Gesellschaft wählen → <strong style="color:var(--ink);">Pipeline starten</strong> — KI kontiert automatisch nach SKR03/SKR04</li>
+        <li>Unsichere Fälle erscheinen als <strong style="color:var(--ink);">Rückfragen</strong> zur manuellen Prüfung — jede Korrektur verbessert das Modell</li>
+        <li>DATEV-Export herunterladen — direkt importierbar</li>
+      </ol>
+    </div>
+    {% if current_user and current_user.role == 'admin' %}
+    <div style="display:flex; flex-direction:column; gap:0.5rem; min-width:160px; align-self:center;">
+      <a href="{{ url_for('euer') }}" class="btn btn-ghost btn-sm" style="text-align:center;">EÜR →</a>
+      <a href="{{ url_for('multi_entity') }}" class="btn btn-ghost btn-sm" style="text-align:center;">Multi-Entity →</a>
+      <a href="{{ url_for('bankabgleich') }}" class="btn btn-ghost btn-sm" style="text-align:center;">Bankabgleich →</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card green">
+    <div class="stat-number">{{ exportiert }}</div>
+    <div class="stat-label">Exportiert</div>
+  </div>
+  <div class="stat-card amber" style="{% if rueckfragen|length > 0 %}border-color:rgba(255,181,71,0.3);{% endif %}">
+    <div class="stat-number">{{ rueckfragen|length }}</div>
+    <div class="stat-label">Rückfragen offen</div>
+  </div>
+  <div class="stat-card red">
+    <div class="stat-number">{{ fehler }}</div>
+    <div class="stat-label">Fehler</div>
+  </div>
+  <div class="stat-card blue">
+    <div class="stat-number">{{ total }}</div>
+    <div class="stat-label">Belege gesamt</div>
+  </div>
+</div>
+
+{# ── AHA-MOMENT: Rückfragen prominently first ────────────────────────── #}
+{% if rueckfragen %}
+<div class="surface accent-strip a2" style="border-color:rgba(255,181,71,0.3); background:rgba(255,181,71,0.03); margin-bottom:1.5rem;">
+  <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:1.25rem; flex-wrap:wrap;">
+    <div style="display:flex; align-items:center; gap:0.5rem; flex:1;">
+      <span style="display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; background:rgba(255,181,71,0.15); border-radius:50%; color:#fbbf24; font-size:0.85rem; flex-shrink:0;">⚠</span>
+      <h2 class="section-title" style="margin:0; color:#fde68a;">{{ rueckfragen|length }} offene Rückfrage{{ 'n' if rueckfragen|length != 1 else '' }} — KI bittet um Ihre Einschätzung</h2>
+    </div>
+    <a href="{{ url_for('rueckfragen') }}" class="btn btn-ghost btn-sm" style="color:#fde68a; border-color:rgba(255,181,71,0.3);">Alle anzeigen →</a>
+  </div>
+
+  <div style="display:flex; flex-direction:column; gap:0.6rem;">
+    {% for b in rueckfragen[:4] %}
+    <div style="display:grid; grid-template-columns:1fr auto; gap:1rem; align-items:center; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:12px; padding:0.85rem 1rem; transition:border-color 0.18s;" onmouseover="this.style.borderColor='rgba(255,181,71,0.2)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.06)'">
+      <div>
+        <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:0.35rem; flex-wrap:wrap;">
+          <span style="font-weight:600; color:var(--ink); font-size:0.9rem;">{{ b.get('lieferant', '–') }}</span>
+          <span style="font-size:0.8rem; color:var(--ink-dimmer);">{{ b.get('belegdatum', '') }}</span>
+          <span style="font-weight:700; color:#fde68a; font-variant-numeric:tabular-nums; font-size:0.88rem;">{{ "%.2f"|format(b.get('bruttobetrag', 0)) }} €</span>
+        </div>
+        {% if b.get('rueckfrage_grund') %}
+        <div style="font-size:0.8rem; color:rgba(253,230,138,0.7); background:rgba(255,181,71,0.06); border-left:2px solid rgba(255,181,71,0.4); padding:0.3rem 0.6rem; border-radius:0 6px 6px 0; line-height:1.45;">
+          {{ b.get('rueckfrage_grund') }}
+        </div>
+        {% endif %}
+      </div>
+      <div style="display:flex; gap:0.35rem; flex-shrink:0;">
+        <a href="{{ url_for('beleg_detail', beleg_id=b.get('beleg_id', '')) }}" class="btn btn-primary btn-sm">Prüfen</a>
+        <a href="{{ url_for('audit_detail', beleg_id=b.get('beleg_id', '')) }}" class="btn btn-ghost btn-sm">Audit</a>
+      </div>
+    </div>
+    {% endfor %}
+    {% if rueckfragen|length > 4 %}
+    <div style="text-align:center; padding:0.5rem;">
+      <a href="{{ url_for('rueckfragen') }}" style="color:#fde68a; text-decoration:none; font-size:0.85rem; font-weight:600;">
+        + {{ rueckfragen|length - 4 }} weitere Rückfragen →
+      </a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+<div class="surface accent-strip">
+  <h2 class="section-title">Pipeline starten</h2>
+  <form method="POST" action="{{ url_for('run_pipeline') }}" style="display:flex; gap:0.75rem; align-items:flex-end; flex-wrap:wrap;" id="run-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-group" style="flex:1; min-width:200px;">
+      <label class="form-label" for="mandant_run">Gesellschaft</label>
+      <select name="mandant_id" id="mandant_run" class="form-select">
+        <option value="">Alle Gesellschaften</option>
+        {% for m in mandanten %}
+        <option value="{{ m.id }}">{{ m.name }} ({{ m.id }})</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="submit" class="btn btn-primary" id="run-btn">
+      <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M3.5 2.5l9 5-9 5V2.5z" fill="currentColor"/></svg>
+      Pipeline starten
+    </button>
+  </form>
+</div>
+
+<div id="pipeline-status" class="surface" style="display:none;">
+  <h2 class="section-title">Laufende Pipeline</h2>
+  <div style="display:flex; gap:1.5rem; align-items:center; margin-bottom:1rem; flex-wrap:wrap;">
+    <div style="font-size:0.875rem;"><strong id="ps-progress" style="color:var(--orange);">0/0</strong> <span style="color:var(--ink-dimmer);">Belege</span></div>
+    <div style="flex:1; min-width:120px;">
+      <div class="progress-track">
+        <div id="ps-bar" class="progress-fill" style="width:0%;"></div>
+      </div>
+    </div>
+    <span id="ps-status" class="badge neu">laufend</span>
+    <span id="ps-speed" style="font-size:0.78rem; color:var(--ink-dimmer);"></span>
+  </div>
+  <div id="ps-current" style="font-size:0.825rem; color:var(--ink-dimmer); margin-bottom:0.5rem;"></div>
+  <div id="ps-log" class="mono" style="font-size:0.75rem; max-height:160px; overflow-y:auto; color:var(--ink-dimmer); background:rgba(10,10,15,0.5); border-radius:8px; padding:0.75rem; white-space:pre;"></div>
+</div>
+
+<script>
+(function() {
+  let polling = null;
+  let startTime = null;
+  function pollStatus() {
+    fetch('/api/pipeline-status')
+      .then(r => r.json())
+      .then(data => {
+        const active = data.active || [];
+        const box = document.getElementById('pipeline-status');
+        if (active.length === 0) {
+          box.style.display = 'none';
+          if (polling) { clearInterval(polling); polling = null; }
+          startTime = null;
+          return;
+        }
+        box.style.display = 'block';
+        const run = active[0];
+        const pct = run.total > 0 ? Math.round(run.verarbeitet / run.total * 100) : 0;
+        document.getElementById('ps-progress').textContent = run.verarbeitet + '/' + run.total;
+        document.getElementById('ps-bar').style.width = pct + '%';
+        const st = document.getElementById('ps-status');
+        st.textContent = run.status;
+        st.className = 'badge ' + (run.status === 'fertig' ? 'exportiert' : run.status === 'fehler' ? 'fehler' : 'neu');
+        document.getElementById('ps-current').textContent = run.aktueller_beleg ? 'Aktuell: ' + run.aktueller_beleg : '';
+        if (startTime && run.verarbeitet > 0) {
+          const elapsed = (Date.now() - startTime) / 1000;
+          const perBeleg = elapsed / run.verarbeitet;
+          document.getElementById('ps-speed').textContent = perBeleg < 60
+            ? '⚡ ' + perBeleg.toFixed(1) + 's / Beleg'
+            : '';
+        }
+        const log = (run.log || []).slice(-10).map(e => e.zeit + '  ' + e.beleg + '  →  ' + e.status).join('\n');
+        document.getElementById('ps-log').textContent = log;
+      }).catch(() => {});
+  }
+  const form = document.getElementById('run-form');
+  if (form) {
+    form.addEventListener('submit', function() {
+      startTime = Date.now();
+      setTimeout(function() {
+        if (!polling) polling = setInterval(pollStatus, 2000);
+        pollStatus();
+      }, 1200);
+    });
+  }
+  pollStatus();
+})();
+</script>
+
+<div class="surface">
+  <h2 class="section-title">Gesellschaften</h2>
+  {% if mandanten %}
+  {% set mandant_colors = ['rgba(255,107,53,', 'rgba(77,159,255,', 'rgba(62,207,109,', 'rgba(255,181,71,', 'rgba(167,139,250,', 'rgba(244,114,182,'] %}
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Gesellschaft</th>
+          <th>Kontenrahmen</th>
+          <th>Notizen</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in mandanten %}
+        {% set ci = loop.index0 % 6 %}
+        {% set col_base = mandant_colors[ci] %}
+        <tr>
+          <td>
+            <div style="display:flex; align-items:center; gap:0.65rem;">
+              <div style="width:8px; height:8px; border-radius:50%; flex-shrink:0;
+                background:{{ col_base }}1); box-shadow:0 0 0 3px {{ col_base }}0.15);"></div>
+              <div>
+                <div style="font-weight:600; color:var(--ink);">{{ m.name }}</div>
+                <div class="mono" style="font-size:0.72rem; color:var(--ink-dimmer);">{{ m.id }}</div>
+              </div>
+            </div>
+          </td>
+          <td>
+            <span class="badge" style="background:{{ col_base }}0.08); color:{{ col_base }}0.9); border:1px solid {{ col_base }}0.2);">
+              {{ m.get('kontenrahmen', 'SKR03') }}
+            </span>
+          </td>
+          <td style="max-width:250px; font-size:0.8rem;">{{ m.get('notizen', '–') }}</td>
+          <td><a href="{{ url_for('mandant_detail', mandant_id=m.id) }}" class="btn btn-ghost btn-sm">Details →</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    Keine Gesellschaften konfiguriert.
+    {% if current_user and current_user.role == 'admin' %}
+    <br><a href="{{ url_for('admin_mandanten') }}" style="color:var(--orange); text-decoration:none; font-weight:600;">Gesellschaften anlegen →</a>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}

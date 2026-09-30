@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+{% block title %}Einstellungen – FiBu-Agent{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h1 class="page-title font-display">System-Einstellungen</h1>
+  <p class="page-subtitle">Alle Konfigurationen direkt im Browser ändern — kein Serverzugriff nötig</p>
+</div>
+
+{# ── Scheduler ───────────────────────────────────── #}
+<form method="POST" action="{{ url_for('admin_settings') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="section" value="scheduler">
+
+  <div class="surface accent-strip" style="max-width:640px;">
+    <h2 class="section-title">
+      <span style="color:var(--emerald); margin-right:0.5rem;">⏱</span>
+      Auto-Scheduler
+    </h2>
+    <p style="font-size:0.85rem; color:var(--ink-dimmer); margin-bottom:1.25rem;">
+      Pipeline läuft täglich automatisch — kein manueller Klick nötig. E-Mail mit DATEV-CSV geht danach automatisch raus.
+    </p>
+
+    <div style="display:flex; align-items:center; gap:1rem; margin-bottom:1.25rem; flex-wrap:wrap;">
+      <label style="display:flex; align-items:center; gap:0.6rem; cursor:pointer;">
+        <div class="toggle-wrap">
+          <input type="checkbox" name="scheduler_active" id="scheduler_active"
+                 {% if s.scheduler_active == 'true' %}checked{% endif %}
+                 style="display:none;" onchange="this.closest('form').querySelector('#sched-status').textContent = this.checked ? 'Aktiv' : 'Inaktiv'; this.closest('form').querySelector('#sched-status').style.color = this.checked ? 'var(--emerald)' : 'var(--ink-dimmer)'">
+          <div id="toggle-sched" class="toggle" onclick="var cb=document.getElementById('scheduler_active'); cb.checked=!cb.checked; cb.dispatchEvent(new Event('change')); this.classList.toggle('on', cb.checked);"
+               style="width:44px;height:24px;border-radius:99px;background:{% if s.scheduler_active=='true' %}var(--emerald){% else %}rgba(167,243,208,0.15){% endif %};border:1px solid rgba(167,243,208,0.25);cursor:pointer;position:relative;transition:background 0.25s;">
+            <div style="position:absolute;top:3px;{% if s.scheduler_active=='true' %}left:22px{% else %}left:3px{% endif %};width:16px;height:16px;border-radius:50%;background:{% if s.scheduler_active=='true' %}#052119{% else %}rgba(167,243,208,0.5){% endif %};transition:left 0.25s;" id="toggle-knob-sched"></div>
+          </div>
+        </div>
+        <span id="sched-status" style="font-weight:600; font-size:0.9rem; color:{% if s.scheduler_active=='true' %}var(--emerald){% else %}var(--ink-dimmer){% endif %};">
+          {% if s.scheduler_active == 'true' %}Aktiv{% else %}Inaktiv{% endif %}
+        </span>
+      </label>
+    </div>
+
+    <div class="form-group" style="max-width:200px; margin-bottom:1.25rem;">
+      <label class="form-label" for="scheduler_time">Uhrzeit (täglich)</label>
+      <input class="form-input" type="time" name="scheduler_time" id="scheduler_time"
+             value="{{ s.scheduler_time or '18:00' }}">
+      <span class="form-hint">Zeitzone: Europe/Berlin</span>
+    </div>
+
+    {% if scheduler_status.running %}
+    <div style="font-size:0.82rem; color:var(--ink-dimmer); margin-bottom:1rem; display:flex; gap:1.5rem; flex-wrap:wrap;">
+      <span>Nächster Run: <strong style="color:var(--ink);">{{ scheduler_status.next_run }}</strong></span>
+      <span>Letzter Run: <strong style="color:var(--ink);">{{ scheduler_status.last_run }}</strong></span>
+    </div>
+    {% endif %}
+
+    <button type="submit" class="btn btn-primary">Speichern</button>
+  </div>
+</form>
+
+{# ── Report-E-Mail ────────────────────────────────── #}
+<form method="POST" action="{{ url_for('admin_settings') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="section" value="report_email">
+
+  <div class="surface" style="max-width:640px;">
+    <h2 class="section-title">
+      <span style="color:var(--emerald); margin-right:0.5rem;">✉</span>
+      Report-E-Mail
+    </h2>
+    <p style="font-size:0.85rem; color:var(--ink-dimmer); margin-bottom:1.25rem;">
+      Nach jedem Pipeline-Run geht automatisch eine E-Mail mit der DATEV-CSV und dem Tages-Summary an diese Adresse.
+    </p>
+
+    <div class="form-group" style="margin-bottom:1rem;">
+      <label class="form-label" for="report_email_to">Empfänger-Adresse</label>
+      <input class="form-input" type="email" name="report_email_to" id="report_email_to"
+             value="{{ s.report_email_to }}" placeholder="steuerberater@kanzlei.de">
+      <span class="form-hint">Leer lassen = Report geht an die IMAP-Adresse selbst</span>
+    </div>
+
+    <div class="form-group" style="margin-bottom:1.25rem;">
+      <label class="form-label" for="public_url">Öffentliche URL (für Links im Report)</label>
+      <input class="form-input" type="url" name="public_url" id="public_url"
+             value="{{ s.public_url }}" placeholder="https://dein-ngrok-link.ngrok-free.app">
+    </div>
+
+    <button type="submit" class="btn btn-primary">Speichern</button>
+  </div>
+</form>
+
+{# ── E-Mail-Eingang ───────────────────────────────── #}
+<form method="POST" action="{{ url_for('admin_settings') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="section" value="imap">
+
+  <div class="surface" style="max-width:640px;">
+    <h2 class="section-title">
+      <span style="color:var(--emerald); margin-right:0.5rem;">📥</span>
+      E-Mail-Eingang (IMAP)
+    </h2>
+    <p style="font-size:0.85rem; color:var(--ink-dimmer); margin-bottom:1.25rem;">
+      Mandanten schicken Belege per E-Mail hierhin. Plus-Addressing:
+      <span class="mono" style="color:var(--emerald);">belege+mandantid@gmail.com</span>
+      → automatisches Routing zum richtigen Mandanten.
+    </p>
+
+    <div class="form-grid" style="margin-bottom:1.25rem;">
+      <div class="form-group">
+        <label class="form-label" for="imap_user">Gmail-Adresse</label>
+        <input class="form-input" type="email" name="imap_user" id="imap_user"
+               value="{{ s.imap_user }}" placeholder="belege@gmail.com" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="imap_password">App-Passwort</label>
+        <input class="form-input" type="password" name="imap_password" id="imap_password"
+               value="{{ s.imap_password }}" placeholder="xxxx xxxx xxxx xxxx" autocomplete="new-password">
+        <span class="form-hint">
+          <a href="https://myaccount.google.com/apppasswords" target="_blank" style="color:var(--emerald); text-decoration:none;">
+            App-Passwort erstellen →
+          </a>
+        </span>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="imap_host">IMAP-Server</label>
+        <input class="form-input" type="text" name="imap_host" id="imap_host"
+               value="{{ s.imap_host or 'imap.gmail.com' }}" placeholder="imap.gmail.com">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="smtp_host">SMTP-Server</label>
+        <input class="form-input" type="text" name="smtp_host" id="smtp_host"
+               value="{{ s.smtp_host or 'smtp.gmail.com' }}" placeholder="smtp.gmail.com">
+      </div>
+    </div>
+
+    <div style="display:flex; gap:0.75rem; flex-wrap:wrap; align-items:center;">
+      <button type="submit" class="btn btn-primary">Speichern</button>
+      <a href="{{ url_for('test_imap_connection') }}" class="btn btn-ghost">Verbindung testen</a>
+    </div>
+  </div>
+</form>
+
+{# ── Pipeline ─────────────────────────────────────── #}
+<form method="POST" action="{{ url_for('admin_settings') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="section" value="pipeline">
+
+  <div class="surface" style="max-width:640px;">
+    <h2 class="section-title">
+      <span style="color:var(--emerald); margin-right:0.5rem;">⚙</span>
+      Pipeline-Parameter
+    </h2>
+
+    <div class="form-grid" style="margin-bottom:1.25rem;">
+      <div class="form-group">
+        <label class="form-label" for="konfidenz_schwelle">Konfidenz-Schwelle</label>
+        <input class="form-input" type="number" name="konfidenz_schwelle" id="konfidenz_schwelle"
+               value="{{ s.konfidenz_schwelle or '0.7' }}" min="0.1" max="1.0" step="0.05">
+        <span class="form-hint">0.0–1.0 · Darunter → Rückfrage (Standard: 0.7)</span>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="daily_budget_eur">API-Budget täglich (€)</label>
+        <input class="form-input" type="number" name="daily_budget_eur" id="daily_budget_eur"
+               value="{{ s.daily_budget_eur or '10.00' }}" min="1" step="0.50">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="monthly_budget_eur">API-Budget monatlich (€)</label>
+        <input class="form-input" type="number" name="monthly_budget_eur" id="monthly_budget_eur"
+               value="{{ s.monthly_budget_eur or '100.00' }}" min="1" step="1">
+      </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Speichern</button>
+  </div>
+</form>
+
+{# ── Vapi Voice-Agent ─────────────────────────────────── #}
+<form method="POST" action="{{ url_for('admin_settings') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="section" value="vapi">
+
+  <div class="surface" style="max-width:640px;">
+    <h2 class="section-title">
+      <span style="color:var(--emerald); margin-right:0.5rem;">📞</span>
+      Vapi Voice-Agent (KI-Telefon-Support)
+    </h2>
+    <p style="font-size:0.85rem; color:var(--ink-dimmer); margin-bottom:1.25rem;">
+      Kunden rufen an — die KI beantwortet Fragen zu Pipeline-Status, Rückfragen und Abrechnung
+      direkt aus dem System. Konto erstellen auf
+      <a href="https://vapi.ai" target="_blank" style="color:var(--emerald); text-decoration:none;">vapi.ai →</a>
+    </p>
+
+    <div class="form-grid" style="margin-bottom:1.25rem;">
+      <div class="form-group" style="grid-column:1/-1;">
+        <label class="form-label" for="vapi_secret">Vapi Secret Token</label>
+        <input class="form-input" type="password" name="vapi_secret" id="vapi_secret"
+               value="{{ s.vapi_secret }}" placeholder="sk_vapi_…" autocomplete="new-password">
+        <span class="form-hint">Wird in Vapi unter Server URL → Secret eingetragen. Schützt die API vor fremden Zugriffen.</span>
+      </div>
+
+      <div class="form-group" style="grid-column:1/-1;">
+        <label class="form-label" for="vapi_phone_number">Telefonnummer (aus Vapi)</label>
+        <input class="form-input" type="text" name="vapi_phone_number" id="vapi_phone_number"
+               value="{{ s.vapi_phone_number }}" placeholder="+49 531 …">
+        <span class="form-hint">Die Nummer die Vapi dir zuweist — für Impressum und Kundenkommunikation.</span>
+      </div>
+    </div>
+
+    {% set base_url = s.public_url.rstrip('/') if s.public_url else 'https://app.fibo-agent.com' %}
+    <div style="background:rgba(45,212,168,0.06); border:1px solid rgba(167,243,208,0.15); border-radius:10px; padding:1rem 1.25rem; margin-bottom:1.25rem; font-size:0.82rem;">
+      <p style="margin:0 0 0.5rem; font-weight:600; color:var(--ink);">Tool-Endpunkte für Vapi konfigurieren:</p>
+      <div style="display:flex; flex-direction:column; gap:0.35rem; font-family:monospace; color:var(--emerald);">
+        <span>{{ base_url }}/api/vapi/pipeline-status</span>
+        <span>{{ base_url }}/api/vapi/rueckfragen</span>
+        <span>{{ base_url }}/api/vapi/mandant-info</span>
+        <span>{{ base_url }}/api/vapi/kosten</span>
+      </div>
+    </div>
+
+    <div style="display:flex; gap:0.75rem; flex-wrap:wrap; align-items:center;">
+      <button type="submit" class="btn btn-primary">Speichern</button>
+      <a href="{{ url_for('vapi_config_download') }}" class="btn btn-ghost">Tool-Konfiguration herunterladen</a>
+    </div>
+  </div>
+</form>
+
+<script>
+// Toggle-Knopf animieren
+document.getElementById('scheduler_active').addEventListener('change', function() {
+  const knob = document.getElementById('toggle-knob-sched');
+  const bg   = document.getElementById('toggle-sched');
+  if (this.checked) {
+    knob.style.left = '22px';
+    knob.style.background = '#052119';
+    bg.style.background = 'var(--emerald)';
+  } else {
+    knob.style.left = '3px';
+    knob.style.background = 'rgba(167,243,208,0.5)';
+    bg.style.background = 'rgba(167,243,208,0.15)';
+  }
+});
+</script>
+
+{% endblock %}

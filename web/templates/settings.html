@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Einstellungen – FiBu-Agent{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h1 class="page-title font-display">Einstellungen</h1>
+  <p class="page-subtitle">Konto und Sicherheitseinstellungen</p>
+</div>
+
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; max-width:720px;">
+
+  <div class="surface accent-strip">
+    <h2 class="section-title">Passwort ändern</h2>
+    <form method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="form-group" style="margin-bottom:1rem;">
+        <label class="form-label" for="new_password">Neues Passwort <span style="color:var(--ink-dimmer);">(mind. 8 Zeichen)</span></label>
+        <input class="form-input" type="password" id="new_password" name="new_password" required minlength="8" autocomplete="new-password">
+      </div>
+      <div class="form-group" style="margin-bottom:1.25rem;">
+        <label class="form-label" for="confirm_password">Bestätigen</label>
+        <input class="form-input" type="password" id="confirm_password" name="confirm_password" required minlength="8" autocomplete="new-password">
+      </div>
+      <button type="submit" class="btn btn-primary">Passwort ändern</button>
+    </form>
+  </div>
+
+  <div class="surface">
+    <h2 class="section-title">Konto</h2>
+    <div style="display:flex; flex-direction:column; gap:0.85rem;">
+      <div>
+        <div style="font-size:0.75rem; font-weight:600; color:var(--ink-dimmer); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:0.2rem;">Benutzername</div>
+        <div class="mono" style="color:var(--ink);">{{ current_user.username }}</div>
+      </div>
+      <div>
+        <div style="font-size:0.75rem; font-weight:600; color:var(--ink-dimmer); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:0.2rem;">Rolle</div>
+        <span class="badge {{ 'admin' if current_user.role == 'admin' else 'neu' }}">{{ current_user.role }}</span>
+      </div>
+      {% if current_user.mandant_ids %}
+      <div>
+        <div style="font-size:0.75rem; font-weight:600; color:var(--ink-dimmer); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:0.2rem;">Mandanten-Zugriff</div>
+        <div style="display:flex; flex-wrap:wrap; gap:0.4rem;">
+          {% for mid in current_user.mandant_ids %}
+          <span class="badge neu">{{ mid }}</span>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,248 @@
+{% extends "base.html" %}
+{% block title %}EÜR {{ aktuelles_jahr }} – FiBu-Agent{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h1 class="page-title">Einnahmen-Überschuss-Rechnung</h1>
+  <p class="page-subtitle">§ 4 Abs. 3 EStG — Jahresübersicht {{ aktuelles_jahr }}</p>
+</div>
+
+{# Tutorial-Banner #}
+<div class="surface" style="border:1px solid rgba(255,107,53,0.2); background:rgba(255,107,53,0.04); margin-bottom:1.5rem;">
+  <div style="display:flex; gap:1.25rem; align-items:flex-start; flex-wrap:wrap;">
+    <div style="font-size:1.75rem; line-height:1; padding-top:0.15rem; flex-shrink:0;">📊</div>
+    <div style="flex:1; min-width:240px;">
+      <div style="font-size:0.7rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--orange); margin-bottom:0.35rem;">So funktioniert die EÜR</div>
+      <div style="font-size:0.9rem; font-weight:600; color:var(--ink); margin-bottom:0.5rem;">Vollautomatisch — kein manuelles Übertragen. Alle exportierten Belege fließen direkt ein.</div>
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:0.5rem 1.5rem;">
+        <div style="font-size:0.8rem; color:var(--ink-soft); display:flex; gap:0.45rem;">
+          <span style="color:var(--orange); flex-shrink:0; font-weight:700;">①</span>
+          <span>Mandant und Jahr wählen — die Auswertung erscheint sofort, live aus den Buchhaltungsdaten</span>
+        </div>
+        <div style="font-size:0.8rem; color:var(--ink-soft); display:flex; gap:0.45rem;">
+          <span style="color:var(--orange); flex-shrink:0; font-weight:700;">②</span>
+          <span>Einnahmen und Ausgaben nach Kontengruppen — direkt DATEV-kompatibel aufgeschlüsselt</span>
+        </div>
+        <div style="font-size:0.8rem; color:var(--ink-soft); display:flex; gap:0.45rem;">
+          <span style="color:var(--orange); flex-shrink:0; font-weight:700;">③</span>
+          <span>Textausgabe für den Steuerberater — kopieren, einfügen, fertig. Kein Übertippseln.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# Filter #}
+<div class="surface surface-sm" style="margin-bottom:1.5rem;">
+  <form method="get" style="display:flex;gap:1rem;align-items:flex-end;flex-wrap:wrap;">
+    <div>
+      <label class="form-label">Mandant</label>
+      <select name="mandant_id" class="form-select" onchange="this.form.submit()">
+        <option value="">Alle</option>
+        {% for m in mandanten %}<option value="{{ m.id }}" {% if aktueller_mandant == m.id %}selected{% endif %}>{{ m.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="form-label">Jahr</label>
+      <select name="jahr" class="form-select" onchange="this.form.submit()">
+        {% for j in range(2024, 2030) %}<option value="{{ j }}" {% if aktuelles_jahr == j %}selected{% endif %}>{{ j }}</option>{% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="form-label">Kontenrahmen</label>
+      <select name="kontenrahmen" class="form-select" onchange="this.form.submit()">
+        <option value="SKR03" {% if euer.kontenrahmen == 'SKR03' %}selected{% endif %}>SKR03</option>
+        <option value="SKR04" {% if euer.kontenrahmen == 'SKR04' %}selected{% endif %}>SKR04</option>
+      </select>
+    </div>
+  </form>
+</div>
+
+{# KPIs #}
+<div class="stats-grid">
+  <div class="stat-card green">
+    <div class="stat-number">{{ "%.0f"|format(euer.gesamt_einnahmen) }} €</div>
+    <div class="stat-label">Betriebseinnahmen</div>
+  </div>
+  <div class="stat-card red">
+    <div class="stat-number">{{ "%.0f"|format(euer.gesamt_ausgaben) }} €</div>
+    <div class="stat-label">Betriebsausgaben</div>
+  </div>
+  <div class="stat-card {% if euer.gewinn_verlust >= 0 %}orange{% else %}red{% endif %}">
+    <div class="stat-number">{{ "%.0f"|format(euer.gewinn_verlust|abs) }} €</div>
+    <div class="stat-label">{% if euer.gewinn_verlust >= 0 %}Gewinn{% else %}Verlust{% endif %}</div>
+  </div>
+  <div class="stat-card blue">
+    <div class="stat-number">{{ euer.belege_count }}</div>
+    <div class="stat-label">Belege einbezogen</div>
+  </div>
+</div>
+
+{# Visual Chart #}
+{% if euer.ausgaben or euer.einnahmen %}
+<div class="surface" style="margin-bottom:1.5rem;">
+  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.25rem; flex-wrap:wrap; gap:0.5rem;">
+    <h2 class="section-title" style="margin:0;">Übersicht {{ aktuelles_jahr }}</h2>
+    <div style="display:flex; gap:1.25rem; font-size:0.78rem;">
+      <span style="display:flex; align-items:center; gap:0.35rem;"><span style="width:10px; height:10px; border-radius:2px; background:rgba(62,207,109,0.7); display:inline-block;"></span> Einnahmen</span>
+      <span style="display:flex; align-items:center; gap:0.35rem;"><span style="width:10px; height:10px; border-radius:2px; background:rgba(255,77,77,0.7); display:inline-block;"></span> Ausgaben</span>
+    </div>
+  </div>
+  <div style="position:relative; height:200px;">
+    <canvas id="euer-chart"></canvas>
+  </div>
+</div>
+{% endif %}
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.5rem;">
+  {# Einnahmen #}
+  <div class="surface accent-strip">
+    <h2 class="section-title" style="color:var(--green);">Betriebseinnahmen</h2>
+    {% if euer.einnahmen %}
+    <table class="data-table">
+      <thead><tr><th>Kategorie</th><th style="text-align:right;">Betrag</th></tr></thead>
+      <tbody>
+        {% for z in euer.einnahmen %}
+        <tr>
+          <td>{{ z.kategorie }}</td>
+          <td style="text-align:right;font-weight:600;color:var(--green);">{{ "%.2f"|format(z.betrag) }} €</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr style="border-top:2px solid var(--black-line);">
+          <td style="font-weight:700;">Gesamt</td>
+          <td style="text-align:right;font-weight:800;color:var(--green);">{{ "%.2f"|format(euer.gesamt_einnahmen) }} €</td>
+        </tr>
+      </tfoot>
+    </table>
+    {% else %}
+    <p class="text-dim">Keine Einnahmen im Zeitraum.</p>
+    {% endif %}
+  </div>
+
+  {# Ausgaben #}
+  <div class="surface accent-strip a2">
+    <h2 class="section-title" style="color:var(--red);">Betriebsausgaben</h2>
+    {% if euer.ausgaben %}
+    <table class="data-table">
+      <thead><tr><th>Kategorie</th><th style="text-align:right;">Betrag</th></tr></thead>
+      <tbody>
+        {% for z in euer.ausgaben %}
+        <tr>
+          <td>{{ z.kategorie }}</td>
+          <td style="text-align:right;font-weight:600;color:var(--red);">{{ "%.2f"|format(z.betrag) }} €</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr style="border-top:2px solid var(--black-line);">
+          <td style="font-weight:700;">Gesamt</td>
+          <td style="text-align:right;font-weight:800;color:var(--red);">{{ "%.2f"|format(euer.gesamt_ausgaben) }} €</td>
+        </tr>
+      </tfoot>
+    </table>
+    {% else %}
+    <p class="text-dim">Keine Ausgaben im Zeitraum.</p>
+    {% endif %}
+  </div>
+</div>
+
+{# Rohdaten #}
+<div class="surface" style="margin-top:1.5rem;">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:0.5rem;">
+    <h2 class="section-title" style="margin:0;">Textausgabe (für Steuerberater)</h2>
+    <button onclick="navigator.clipboard.writeText(document.getElementById('euer-text').textContent).then(()=>{ this.textContent='✓ Kopiert'; setTimeout(()=>this.textContent='Kopieren',2000) })" class="btn btn-ghost btn-sm">Kopieren</button>
+  </div>
+  <pre id="euer-text" style="font-family:'SF Mono','Fira Code',monospace;font-size:0.8rem;color:var(--ink-mute);line-height:1.7;white-space:pre-wrap;">{{ euer_text }}</pre>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+{% if euer.ausgaben or euer.einnahmen %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+(function() {
+  var ctx = document.getElementById('euer-chart');
+  if (!ctx) return;
+
+  var einnahmen = {{ (euer.einnahmen or []) | tojson }};
+  var ausgaben = {{ (euer.ausgaben or []) | tojson }};
+
+  var allCats = [];
+  einnahmen.forEach(function(z) { if (!allCats.includes(z.kategorie)) allCats.push(z.kategorie); });
+  ausgaben.forEach(function(z) { if (!allCats.includes(z.kategorie)) allCats.push(z.kategorie); });
+  if (allCats.length > 8) allCats = allCats.slice(0, 8);
+
+  var einnahmenMap = {};
+  einnahmen.forEach(function(z) { einnahmenMap[z.kategorie] = z.betrag; });
+  var ausgabenMap = {};
+  ausgaben.forEach(function(z) { ausgabenMap[z.kategorie] = z.betrag; });
+
+  var einnahmenVals = allCats.map(function(c) { return einnahmenMap[c] || 0; });
+  var ausgabenVals = allCats.map(function(c) { return ausgabenMap[c] || 0; });
+
+  Chart.defaults.color = 'rgba(248,249,252,0.45)';
+  Chart.defaults.font.family = "'Switzer', 'Inter', sans-serif";
+
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: allCats,
+      datasets: [
+        {
+          label: 'Einnahmen',
+          data: einnahmenVals,
+          backgroundColor: 'rgba(62,207,109,0.55)',
+          borderColor: 'rgba(62,207,109,0.9)',
+          borderWidth: 1,
+          borderRadius: 6,
+        },
+        {
+          label: 'Ausgaben',
+          data: ausgabenVals,
+          backgroundColor: 'rgba(255,77,77,0.45)',
+          borderColor: 'rgba(255,77,77,0.8)',
+          borderWidth: 1,
+          borderRadius: 6,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: 'rgba(10,10,15,0.95)',
+          borderColor: 'rgba(255,255,255,0.1)',
+          borderWidth: 1,
+          callbacks: {
+            label: function(ctx) {
+              return ' ' + ctx.dataset.label + ': ' + ctx.raw.toLocaleString('de-DE', {minimumFractionDigits:2}) + ' €';
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: 'rgba(255,255,255,0.04)' },
+          border: { color: 'rgba(255,255,255,0.08)' },
+          ticks: { font: { size: 11 }, maxRotation: 30 }
+        },
+        y: {
+          grid: { color: 'rgba(255,255,255,0.04)' },
+          border: { color: 'rgba(255,255,255,0.08)' },
+          ticks: {
+            callback: function(v) { return v.toLocaleString('de-DE') + ' €'; },
+            font: { size: 11 }
+          }
+        }
+      }
+    }
+  });
+})();
+</script>
+{% endif %}
+{% endblock %}

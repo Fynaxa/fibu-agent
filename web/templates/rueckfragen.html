@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% block title %}Rückfragen – FiBu-Agent{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h1 class="page-title font-display">Rückfragen</h1>
+  <p class="page-subtitle">
+    {% if belege %}
+    {{ belege|length }} offene Belege — KI hat diese Buchungen zur manuellen Prüfung markiert
+    {% else %}
+    Keine offenen Rückfragen
+    {% endif %}
+  </p>
+</div>
+
+{# Tutorial-Banner #}
+<div class="surface" style="border:1px solid rgba(255,107,53,0.2); background:rgba(255,107,53,0.04); margin-bottom:1.5rem;">
+  <div style="display:flex; gap:1.25rem; align-items:flex-start; flex-wrap:wrap;">
+    <div style="font-size:1.75rem; line-height:1; padding-top:0.15rem; flex-shrink:0;">🔍</div>
+    <div style="flex:1; min-width:240px;">
+      <div style="font-size:0.7rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--orange); margin-bottom:0.35rem;">So funktionieren Rückfragen</div>
+      <div style="font-size:0.9rem; font-weight:600; color:var(--ink); margin-bottom:0.5rem;">Die KI hat diese Belege nicht kontiert — weil sie sich nicht sicher genug war.</div>
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:0.5rem 1.5rem;">
+        <div style="font-size:0.8rem; color:var(--ink-soft); display:flex; gap:0.45rem;">
+          <span style="color:var(--orange); flex-shrink:0; font-weight:700;">①</span>
+          <span>Klicken Sie auf <strong style="color:var(--ink);">Prüfen</strong> — die KI erklärt auf Deutsch, warum sie unsicher war</span>
+        </div>
+        <div style="font-size:0.8rem; color:var(--ink-soft); display:flex; gap:0.45rem;">
+          <span style="color:var(--orange); flex-shrink:0; font-weight:700;">②</span>
+          <span>Konto korrigieren oder bestätigen — dann auf <strong style="color:var(--ink);">Genehmigen</strong> klicken</span>
+        </div>
+        <div style="font-size:0.8rem; color:var(--ink-soft); display:flex; gap:0.45rem;">
+          <span style="color:var(--orange); flex-shrink:0; font-weight:700;">③</span>
+          <span>Jede Korrektur fließt automatisch in den Lernalgorithmus ein — das Modell wird besser</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if belege %}
+
+{# Bulk-Approve Banner #}
+<div class="surface surface-sm accent-strip" style="margin-bottom:1rem; display:flex; align-items:center; gap:1rem; flex-wrap:wrap; padding:1rem 1.25rem; border-radius:14px;">
+  <div style="flex:1; min-width:200px;">
+    <div style="font-size:0.8rem; font-weight:600; color:var(--ink); margin-bottom:0.15rem;">Bulk-Bestätigung</div>
+    <div style="font-size:0.78rem; color:var(--ink-dimmer);">Wähle Belege aus und bestätige alle auf einmal — nur wenn Kontierung bereits korrekt</div>
+  </div>
+  <div style="display:flex; gap:0.5rem; align-items:center; flex-shrink:0;">
+    <span id="bulk-count" style="font-size:0.8rem; color:var(--ink-dimmer);">0 ausgewählt</span>
+    <button type="button" id="select-all-btn" class="btn btn-ghost btn-sm">Alle wählen</button>
+    <button type="button" id="bulk-submit-btn" class="btn btn-primary btn-sm" disabled
+            onclick="document.getElementById('bulk-form').submit();">
+      ✓ Ausgewählte bestätigen
+    </button>
+  </div>
+</div>
+
+<form method="POST" action="{{ url_for('bulk_approve') }}" id="bulk-form">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+  <div class="surface" style="padding:0;">
+    <div style="overflow-x:auto; border-radius:20px;">
+      <table style="width:100%; border-collapse:collapse; font-size:0.84rem;">
+        <thead>
+          <tr>
+            <th style="padding:0.65rem 0.85rem; border-bottom:1px solid var(--black-line); color:var(--ink-dimmer); font-weight:700; font-size:0.7rem; letter-spacing:0.07em; text-transform:uppercase; width:40px;">
+              <input type="checkbox" id="select-all-checkbox" class="form-check" title="Alle auswählen">
+            </th>
+            <th style="padding:0.65rem 0.85rem; border-bottom:1px solid var(--black-line); color:var(--ink-dimmer); font-weight:700; font-size:0.7rem; letter-spacing:0.07em; text-transform:uppercase; text-align:left;">Lieferant</th>
+            <th style="padding:0.65rem 0.85rem; border-bottom:1px solid var(--black-line); color:var(--ink-dimmer); font-weight:700; font-size:0.7rem; letter-spacing:0.07em; text-transform:uppercase; text-align:left;">Datum</th>
+            <th style="padding:0.65rem 0.85rem; border-bottom:1px solid var(--black-line); color:var(--ink-dimmer); font-weight:700; font-size:0.7rem; letter-spacing:0.07em; text-transform:uppercase; text-align:right;">Betrag</th>
+            <th style="padding:0.65rem 0.85rem; border-bottom:1px solid var(--black-line); color:var(--ink-dimmer); font-weight:700; font-size:0.7rem; letter-spacing:0.07em; text-transform:uppercase; text-align:left;">KI-Begründung</th>
+            <th style="padding:0.65rem 0.85rem; border-bottom:1px solid var(--black-line); color:var(--ink-dimmer); font-weight:700; font-size:0.7rem; letter-spacing:0.07em; text-transform:uppercase; text-align:right;"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for b in belege %}
+          <tr style="transition:background 0.12s;" onmouseover="this.style.background='rgba(255,255,255,0.025)'" onmouseout="this.style.background=''">
+            <td style="padding:0.7rem 0.85rem; border-bottom:1px solid rgba(255,255,255,0.035); vertical-align:middle;">
+              <input type="checkbox" name="beleg_ids" value="{{ b.get('beleg_id', '') }}"
+                     class="form-check beleg-checkbox" title="Auswählen">
+            </td>
+            <td style="padding:0.7rem 0.85rem; border-bottom:1px solid rgba(255,255,255,0.035); vertical-align:middle;">
+              <div style="font-weight:600; color:var(--ink);">{{ b.get('lieferant', '–') }}</div>
+              {% if b.get('soll_konto') %}
+              <div class="mono" style="font-size:0.72rem; color:var(--orange);">→ {{ b.soll_konto }}</div>
+              {% endif %}
+            </td>
+            <td style="padding:0.7rem 0.85rem; border-bottom:1px solid rgba(255,255,255,0.035); vertical-align:middle; font-size:0.82rem; color:var(--ink-mute);">{{ b.get('belegdatum', '–') }}</td>
+            <td style="padding:0.7rem 0.85rem; border-bottom:1px solid rgba(255,255,255,0.035); vertical-align:middle; text-align:right; font-variant-numeric:tabular-nums; font-weight:600; color:var(--ink);">{{ "%.2f"|format(b.get('bruttobetrag', 0)) }} €</td>
+            <td style="padding:0.7rem 0.85rem; border-bottom:1px solid rgba(255,255,255,0.035); vertical-align:middle; max-width:320px;">
+              <div style="font-size:0.8rem; color:rgba(253,230,138,0.8); line-height:1.45;">{{ b.get('rueckfrage_grund', '') }}</div>
+              {% if b.get('ocr_hinweis') %}
+              <div style="font-size:0.75rem; color:#fde68a; margin-top:0.2rem;">OCR: {{ b.ocr_hinweis }}</div>
+              {% endif %}
+              {% if b.get('validierung_fehler') %}
+              <div style="font-size:0.75rem; color:#fca5a5; margin-top:0.2rem;">{{ b.validierung_fehler|join(', ') }}</div>
+              {% endif %}
+            </td>
+            <td style="padding:0.7rem 0.85rem; border-bottom:1px solid rgba(255,255,255,0.035); vertical-align:middle;">
+              <div style="display:flex; gap:0.35rem; justify-content:flex-end;">
+                <a href="{{ url_for('beleg_detail', beleg_id=b.get('beleg_id', '')) }}" class="btn btn-primary btn-sm">Prüfen</a>
+                <a href="{{ url_for('audit_detail', beleg_id=b.get('beleg_id', '')) }}" class="btn btn-ghost btn-sm">Audit</a>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</form>
+
+<script>
+(function() {
+  var checkboxes = document.querySelectorAll('.beleg-checkbox');
+  var selectAll = document.getElementById('select-all-checkbox');
+  var selectAllBtn = document.getElementById('select-all-btn');
+  var submitBtn = document.getElementById('bulk-submit-btn');
+  var countEl = document.getElementById('bulk-count');
+
+  function updateCount() {
+    var checked = document.querySelectorAll('.beleg-checkbox:checked').length;
+    countEl.textContent = checked + ' ausgewählt';
+    submitBtn.disabled = checked === 0;
+    submitBtn.style.opacity = checked === 0 ? '0.5' : '1';
+  }
+
+  checkboxes.forEach(function(cb) {
+    cb.addEventListener('change', updateCount);
+  });
+
+  selectAll.addEventListener('change', function() {
+    checkboxes.forEach(function(cb) { cb.checked = selectAll.checked; });
+    updateCount();
+  });
+
+  selectAllBtn.addEventListener('click', function() {
+    var allChecked = Array.from(checkboxes).every(function(cb) { return cb.checked; });
+    checkboxes.forEach(function(cb) { cb.checked = !allChecked; });
+    selectAll.checked = !allChecked;
+    selectAllBtn.textContent = allChecked ? 'Alle wählen' : 'Auswahl aufheben';
+    updateCount();
+  });
+
+  updateCount();
+})();
+</script>
+
+{% else %}
+<div class="surface" style="text-align:center; padding:3.5rem 2rem;">
+  <div style="width:56px; height:56px; background:rgba(62,207,109,0.1); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 1rem; font-size:1.5rem;">✓</div>
+  <p style="font-size:1.1rem; font-weight:600; color:var(--green); margin-bottom:0.4rem;">Alles erledigt</p>
+  <p style="font-size:0.875rem; color:var(--ink-dimmer);">Keine offenen Rückfragen — alle Belege sind verarbeitet.</p>
+</div>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Mandantenverwaltung – FiBu-Agent{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h1 class="page-title font-display">Mandantenverwaltung</h1>
+  <p class="page-subtitle">Mandanten anlegen, bearbeiten und verwalten</p>
+</div>
+
+<div class="surface accent-strip" style="max-width:720px;">
+  <h2 class="section-title">Neuen Mandanten anlegen</h2>
+  <form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="action" value="create">
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label" for="id">Mandanten-ID</label>
+        <input class="form-input" type="text" id="id" name="id" required placeholder="z.B. M002" style="text-transform:uppercase;">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="name">Firmenname</label>
+        <input class="form-input" type="text" id="name" name="name" required placeholder="z.B. Müller & Partner GmbH">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="kontenrahmen">Kontenrahmen</label>
+        <select class="form-select" name="kontenrahmen" id="kontenrahmen">
+          <option value="SKR03" selected>SKR03</option>
+          <option value="SKR04">SKR04</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="berater_nr">DATEV Berater-Nr. <span style="color:var(--ink-dimmer);">(optional)</span></label>
+        <input class="form-input" type="text" id="berater_nr" name="berater_nr" placeholder="12345">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="mandant_nr">DATEV Mandant-Nr. <span style="color:var(--ink-dimmer);">(optional)</span></label>
+        <input class="form-input" type="text" id="mandant_nr" name="mandant_nr" placeholder="67890">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="notizen">Notizen <span style="color:var(--ink-dimmer);">(optional)</span></label>
+        <input class="form-input" type="text" id="notizen" name="notizen" placeholder="Interne Anmerkungen">
+      </div>
+      <div class="form-grid-full" style="padding-top:0.25rem;">
+        <button type="submit" class="btn btn-primary">Mandant anlegen</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<div class="surface">
+  <h2 class="section-title">Mandanten ({{ mandanten|length }})</h2>
+  {% if mandanten %}
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Name</th>
+          <th>Kontenrahmen</th>
+          <th>Berater-Nr.</th>
+          <th>Mandant-Nr.</th>
+          <th>Notizen</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in mandanten %}
+        <tr>
+          <td class="mono">{{ m.id }}</td>
+          <td style="font-weight:500; color:var(--ink);">{{ m.name }}</td>
+          <td><span class="badge neu">{{ m.get('kontenrahmen', 'SKR03') }}</span></td>
+          <td class="mono">{{ m.get('berater_nr', '') or '–' }}</td>
+          <td class="mono">{{ m.get('mandant_nr', '') or '–' }}</td>
+          <td style="font-size:0.8rem; max-width:160px;">{{ m.get('notizen', '') or '–' }}</td>
+          <td>
+            <div class="action-row">
+              <a href="{{ url_for('mandant_detail', mandant_id=m.id) }}" class="btn btn-ghost btn-sm">Details</a>
+              <form method="POST" style="display:inline;" onsubmit="return confirm('Mandant wirklich entfernen? Daten bleiben erhalten.');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="delete">
+                <input type="hidden" name="mandant_id" value="{{ m.id }}">
+                <button type="submit" class="btn btn-danger btn-sm">Entfernen</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">Noch keine Mandanten angelegt.</div>
+  {% endif %}
+</div>
+
+{% endblock %}
