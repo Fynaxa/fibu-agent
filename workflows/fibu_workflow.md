@@ -21,4 +21,4 @@
 - Format: DATEV Buchungsstapel CSV (Semikolon-getrennt, UTF-8)
 - Datumsformat im Export: TTMM (4-stellig)
 - Dezimaltrennzeichen: Komma
-- Ein Export pro Tag, Dateiname: `EXTF_YYYYMMDD.csv`
+- Eine Exportdatei je Lauf, Dateiname: `EXTF_YYYYMMDD_HHMMSS.csv` (der Code setzt den Zeitstempel bis auf die Sekunde)

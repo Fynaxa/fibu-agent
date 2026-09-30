@@ -16,7 +16,7 @@ trotzdem seit Wochen als Docker-Dienst hinter nginx unter
 |---|---|
 | Umfang | 10.100 Zeilen Python in 43 Dateien: 28 Werkzeugmodule, Flask-Oberfläche mit 46 Routen und 25 Vorlagen |
 | Tests | **31**, laufen offline ohne API-Zugang |
-| Kontierung | 3 Stufen: 93 Regeln SKR03 und 42 Regeln SKR04, dann Sprachmodell, dann Rückfrage ab Konfidenz unter 0,7 |
+| Kontierung | 4 Stufen: bestätigte Lieferanten aus dem Gedächtnis (ab zehn Bestätigungen ohne Rückfrage), dann 93 Regeln SKR03 bzw. 42 Regeln SKR04 (längstes Muster gewinnt), dann Sprachmodell, dann Rückfrage ab Konfidenz unter 0,7 |
 | Betrieb | Docker Compose mit nginx, Healthcheck, `restart: unless-stopped`, Tagesbudget für API-Kosten |
 | Orchestrierung | 14 n8n-Workflows mit 128 Knoten, als Export im Repository |
 | Abhängigkeiten | Flask, pdfplumber, anthropic, cryptography, bcrypt, flask-limiter, apscheduler |
@@ -39,7 +39,7 @@ Beleg (IMAP-Postfach, Watchfolder oder Upload)
                     2. Sprachmodell mit Kontenrahmen als Kontext
                     3. Rückfrage-Queue, wenn Konfidenz < 0,7
   → Validierung     Pflichtfelder, Betrags- und MwSt-Plausibilität, Dublettencheck
-  → Export          DATEV-Buchungsstapel (EXTF, CSV), ein Stapel pro Tag
+  → Export          DATEV-Buchungsstapel (EXTF, CSV), eine Datei je Lauf
   → Bericht         Tageszusammenfassung: verarbeitet, exportiert, offen
 ```
 
