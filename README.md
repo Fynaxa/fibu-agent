@@ -30,10 +30,13 @@ Schrift (die Systemschrift, auf Apple-Geräten SF Pro), Kontrast über Größe u
 Gewicht statt über Farbe. Schwarz ist Text und primäre Aktion, das Fynaxa-Orange
 ist der einzige Akzent (aktiver Reiter, Rückfragen, Fokus), Rot gibt es nur für
 Fehler. Die Übersicht beginnt mit einem Satz, der den Tag zusammenfasst („3
-Rückfragen warten, 1 Beleg mit Fehler."). Beim Seitenaufruf geht keine Anfrage an
+Rückfragen warten, 1 Beleg mit Fehler."). Fünf Reiter statt dreizehn: Übersicht, Belege,
+Rückfragen; Buchhaltung und Verwaltung als Ausklappmenüs, die nur Administratoren
+sehen. Beim Seitenaufruf geht keine Anfrage an
 Google; die einzige Webschrift (IBM Plex Mono für Kennungen) liegt im Repository.
 Weitere Ansichten: [Anmeldung](docs/screenshots/anmeldung.png),
-[Rückfragen mit Sammelbestätigung](docs/screenshots/rueckfragen.png).
+[Rückfragen mit Sammelbestätigung](docs/screenshots/rueckfragen.png),
+[Ausklappmenü](docs/screenshots/menue.png).
 
 ## Was hier nicht liegt
 
