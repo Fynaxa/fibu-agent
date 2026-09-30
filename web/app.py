@@ -12,7 +12,7 @@ from pathlib import Path
 from threading import Thread
 
 from flask import (Flask, render_template, request, redirect, url_for,
-                   flash, send_file, jsonify, session, g)
+                   flash, send_file, jsonify, session, g, abort)
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_wtf.csrf import CSRFProtect
@@ -471,6 +471,59 @@ def rueckfragen():
         belege = [b for b in belege if b.get("mandant_id") in g.user["mandant_ids"]]
     return render_template("rueckfragen.html", belege=belege)
 
+@app.route("/bulk-approve", methods=["POST"])
+@login_required
+def bulk_approve():
+    """Bulk-Bestätigung mehrerer Rückfragen auf einmal (Kontierung unveraendert)."""
+    from tools.db import get_beleg, upsert_beleg, update_vendor_cache
+    from tools import audit_log as al
+
+    beleg_ids = request.form.getlist("beleg_ids")
+    if not beleg_ids:
+        flash("Keine Belege ausgewählt.", "error")
+        return redirect(url_for("rueckfragen"))
+
+    genehmigt = 0
+    fehler = 0
+    for beleg_id in beleg_ids:
+        beleg = get_beleg(beleg_id)
+        if not beleg:
+            fehler += 1
+            continue
+        # Zugriffsprüfung
+        if g.user["role"] != "admin" and g.user["mandant_ids"]:
+            if beleg.get("mandant_id") and beleg["mandant_id"] not in g.user["mandant_ids"]:
+                fehler += 1
+                continue
+        if not beleg.get("soll_konto"):
+            fehler += 1
+            continue
+        updated = {**beleg, "status": "validiert", "rueckfrage_grund": None, "kontierung_methode": "manuell_bulk"}
+        upsert_beleg(updated)
+        al.log_event(beleg_id, "bulk_genehmigt", {"user": g.user["username"]})
+        try:
+            _lieferant = (beleg.get("lieferant") or "").strip()
+            if _lieferant:
+                update_vendor_cache(
+                    lieferant=_lieferant,
+                    soll_konto=beleg["soll_konto"],
+                    bezeichnung=beleg.get("buchungstext", ""),
+                    steuerschluessel=beleg.get("steuerschluessel", ""),
+                    mandant_id=beleg.get("mandant_id"),
+                    bestaetigt=True,
+                )
+        except Exception as exc:
+            logger.warning("Bulk vendor-cache update fehlgeschlagen: %s", exc)
+        genehmigt += 1
+
+    if genehmigt:
+        flash(f"{genehmigt} Beleg(e) genehmigt.", "success")
+    if fehler:
+        flash(f"{fehler} Beleg(e) konnten nicht genehmigt werden.", "error")
+    return redirect(url_for("rueckfragen"))
+
+
+
 
 @app.route("/beleg/<beleg_id>")
 @login_required
@@ -488,7 +541,7 @@ def beleg_detail(beleg_id):
             flash("Kein Zugriff auf diesen Beleg.", "error")
             return redirect(url_for("rueckfragen"))
     history = al.get_history(beleg_id)
-    return render_template("beleg_detail.html", beleg=beleg, history=history)
+    return render_template("beleg_detail.html", beleg=beleg, history=history, feld_konfidenz={})
 
 
 @app.route("/beleg/<beleg_id>/resolve", methods=["POST"])
@@ -1071,6 +1124,7 @@ def inbound_mail():
     import time
     from tools.config import MAILGUN_SIGNING_KEY, INBOX_DIR, get_mandant, mandant_dirs
 
+    # Mailgun-Signatur prüfen wenn Signing Key konfiguriert
     # Fail-closed: ohne Signing Key wird der Webhook nicht angenommen. Sonst könnte
     # jeder, der die Adresse kennt, Belege in einen Mandanten einschleusen.
     if not MAILGUN_SIGNING_KEY:
@@ -1094,7 +1148,7 @@ def inbound_mail():
     except ValueError:
         return jsonify({"error": "invalid timestamp"}), 400
 
-    # Empfänger-Adresse → Mandant-ID (muster@inbox.fynaxa.de → MUSTER)
+    # Empfänger-Adresse → Mandant-ID (lauer@inbox.fynaxa.de → LAUER)
     recipient  = request.form.get("recipient", "")
     local_part = recipient.split("@")[0].upper() if "@" in recipient else ""
 
@@ -1317,7 +1371,7 @@ def vapi_config_download():
                         "properties": {
                             "mandant_id": {
                                 "type": "string",
-                                "description": "Optionale Mandanten-ID (z.B. MUSTER). Leer lassen für globalen Status."
+                                "description": "Optionale Mandanten-ID (z.B. LAUER). Leer lassen für globalen Status."
                             }
                         },
                         "required": []
@@ -1482,6 +1536,113 @@ def admin_demo_reset():
         logger.exception("Demo-Reset fehlgeschlagen: %s", exc)
         flash(f"Reset fehlgeschlagen: {exc}", "error")
     return redirect(url_for("dashboard"))
+
+
+
+@app.route("/beleg/<beleg_id>/pdf")
+@login_required
+def beleg_pdf(beleg_id):
+    from tools.db import get_beleg
+    beleg = get_beleg(beleg_id)
+    if not beleg:
+        abort(404)
+    if g.user["role"] != "admin" and g.user.get("mandant_ids"):
+        if beleg.get("mandant_id") and beleg["mandant_id"] not in g.user["mandant_ids"]:
+            abort(403)
+    dateipfad = beleg.get("dateipfad")
+    if not dateipfad:
+        abort(404)
+    p = Path(dateipfad)
+    if not p.exists():
+        dateiname = beleg.get("dateiname") or p.name
+        mandant_id = beleg.get("mandant_id")
+        archiv_base = ROOT / "archiv"
+        if mandant_id:
+            archiv_base = archiv_base / mandant_id
+        found = sorted(archiv_base.rglob(dateiname))
+        if found:
+            p = found[-1]
+        else:
+            abort(404)
+    mimetype = None
+    ext = p.suffix.lower()
+    if ext == ".pdf":
+        mimetype = "application/pdf"
+    elif ext in (".jpg", ".jpeg"):
+        mimetype = "image/jpeg"
+    elif ext == ".png":
+        mimetype = "image/png"
+    return send_file(str(p), mimetype=mimetype)
+
+
+@app.route("/meine-belege")
+@login_required
+def meine_belege():
+    from tools.db import get_belege
+    status_filter = request.args.get("status", "")
+    belege = get_belege(mandant_id=None)
+    if g.user["role"] != "admin" and g.user.get("mandant_ids"):
+        belege = [b for b in belege if b.get("mandant_id") in g.user["mandant_ids"]]
+    if status_filter:
+        belege = [b for b in belege if b.get("status") == status_filter]
+    belege.sort(key=lambda b: b.get("erstellt_am") or "", reverse=True)
+    return render_template("meine_belege.html", belege=belege, status_filter=status_filter)
+
+
+@app.route("/suche")
+@login_required
+def suche():
+    from tools.db import get_belege
+    q = request.args.get("q", "").strip()
+    ergebnisse = []
+    if q:
+        alle = get_belege(mandant_id=None)
+        if g.user["role"] != "admin" and g.user.get("mandant_ids"):
+            alle = [b for b in alle if b.get("mandant_id") in g.user["mandant_ids"]]
+        q_lower = q.lower()
+        suchfelder = ["lieferant", "rechnungsnummer", "buchungstext",
+                      "soll_konto", "haben_konto", "belegdatum", "dateiname"]
+        for b in alle:
+            if any(q_lower in str(b.get(f) or "").lower() for f in suchfelder):
+                ergebnisse.append(b)
+    return render_template("suche.html", q=q, ergebnisse=ergebnisse)
+
+
+@app.route("/antwort/<token>", methods=["GET"])
+def mandant_antwort(token):
+    from tools.db import get_beleg
+    beleg = get_beleg(token)
+    if not beleg or beleg.get("status") != "rueckfrage":
+        return render_template("mandant_antwort.html",
+                               rq=None, beleg=None, bereits_beantwortet=True)
+    import types
+    rq = types.SimpleNamespace(
+        token=token,
+        frage=beleg.get("rueckfrage_grund") or "Bitte klaren Sie diesen Beleg.",
+        antwort=None,
+    )
+    return render_template("mandant_antwort.html",
+                           rq=rq, beleg=beleg, bereits_beantwortet=False)
+
+
+@app.route("/antwort/<token>", methods=["POST"])
+def mandant_antwort_submit(token):
+    from tools.db import get_beleg
+    from tools import audit_log as al
+    beleg = get_beleg(token)
+    if not beleg:
+        return "Beleg nicht gefunden.", 404
+    antwort = request.form.get("antwort", "").strip()
+    if antwort:
+        al.log_event(token, "mandant_antwort", {"antwort": antwort})
+    import types
+    rq = types.SimpleNamespace(
+        token=token,
+        frage=beleg.get("rueckfrage_grund") or "",
+        antwort=antwort,
+    )
+    return render_template("mandant_antwort.html",
+                           rq=rq, beleg=beleg, bereits_beantwortet=True)
 
 
 if __name__ == "__main__":

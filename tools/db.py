@@ -442,20 +442,61 @@ VERTRAUENS_SCHWELLE = 10  # Nach X bestätigten Buchungen: Vertrauenslieferant
 
 
 def get_vendor_cache(lieferant: str, mandant_id: str | None = None) -> dict | None:
-    """Lieferant-Cache-Lookup. Mandant-spezifisch vor globalem Eintrag."""
+    """Lieferant-Cache-Lookup. Mandant-spezifisch vor globalem Eintrag.
+
+    Fallback: normalisierter Name (Bindestriche→Leerzeichen), dann LIKE-Suche
+    auf erstem signifikantem Wort (≥4 Zeichen, kein Rechtsform-Suffix).
+    """
+    import re as _re
     normalized = lieferant.strip().lower()
-    with get_db() as conn:
-        # Mandant-spezifisch zuerst, dann global (NULL mandant_id)
-        row = conn.execute("""
-            SELECT * FROM vendor_cache
-            WHERE LOWER(lieferant) = ?
-              AND (mandant_id = ? OR mandant_id IS NULL)
+    normalized_clean = _re.sub(r"[-/&+]", " ", normalized)
+    normalized_clean = _re.sub(r"\s+", " ", normalized_clean).strip()
+
+    ORDER_SQL = """
             ORDER BY
                 CASE WHEN mandant_id = ? THEN 0 ELSE 1 END,
                 bestaetigt_count DESC
             LIMIT 1
-        """, (normalized, mandant_id, mandant_id)).fetchone()
-        return dict(row) if row else None
+        """
+
+    with get_db() as conn:
+        def _q(where, params):
+            return conn.execute(
+                "SELECT * FROM vendor_cache WHERE " + where + ORDER_SQL,
+                params
+            ).fetchone()
+
+        # 1. Exact match
+        row = _q(
+            "LOWER(lieferant) = ? AND (mandant_id = ? OR mandant_id IS NULL)",
+            (normalized, mandant_id, mandant_id),
+        )
+        if row:
+            return dict(row)
+
+        # 2. Hyphen/special-char normalised match
+        if normalized_clean != normalized:
+            row = _q(
+                "REPLACE(REPLACE(LOWER(lieferant),'-',' '),'&',' ') = ?"
+                " AND (mandant_id = ? OR mandant_id IS NULL)",
+                (normalized_clean, mandant_id, mandant_id),
+            )
+            if row:
+                return dict(row)
+
+        # 3. Significant-word LIKE fallback
+        SUFFIXES = {"gmbh", "ag", "kg", "ltd", "inc", "corp", "ug", "mbh", "e.v.", "co."}
+        words = [w for w in normalized_clean.split()
+                 if len(w) >= 4 and w not in SUFFIXES]
+        if words:
+            row = _q(
+                "LOWER(lieferant) LIKE ? AND (mandant_id = ? OR mandant_id IS NULL)",
+                (f"%{words[0]}%", mandant_id, mandant_id),
+            )
+            if row:
+                return dict(row)
+
+        return None
 
 
 def update_vendor_cache(
