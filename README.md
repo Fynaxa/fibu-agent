@@ -10,8 +10,8 @@ Rückfrage-Queue statt im Export.
 einen Pilotlauf mit Testbelegen durchlaufen hat. Einen zahlenden Kunden gab es
 nicht; der Markt wurde nach dem Piloten nicht weiterverfolgt. Der Prototyp läuft
 trotzdem seit Wochen als Docker-Dienst hinter nginx unter
-**https://app.fynaxa.de**. Demo-Zugang ohne Anfrage: Benutzer `gast`, Passwort
-`Belege-Demo-2026` (Mandant DEMO, erfundene Belege, Tagesbudget gedeckelt).
+**https://app.fynaxa.de** (Login; ein Demo-Zugang mit erfundenen Belegen wird auf Anfrage
+an info@fynaxa.de am selben Tag vergeben).
 
 Zur Historie: Der Code entstand Juni und Juli 2026 als Pilot in einem privaten
 Repository; die Commit-Historie hier beginnt mit der Veröffentlichung am
