@@ -80,13 +80,32 @@ def admin_required(f):
     return decorated
 
 
+def _offene_rueckfragen(user) -> int:
+    """Zahl der offenen Rückfragen für die Plakette in der Kopfleiste.
+    Nicht-Admins sehen nur ihre Gesellschaften. Fehler liefern 0, nie eine 500."""
+    try:
+        from tools.db import get_belege
+        u = dict(user)
+        offen = [b for b in get_belege() if b.get("status") == "rueckfrage"]
+        if u.get("role") != "admin":
+            ids = u.get("mandant_ids") or ""
+            if isinstance(ids, str):
+                ids = json.loads(ids) if ids.strip().startswith("[") else [x.strip() for x in ids.split(",") if x.strip()]
+            erlaubt = set(ids)
+            offen = [b for b in offen if b.get("mandant_id") in erlaubt]
+        return len(offen)
+    except Exception as exc:
+        logger.debug("Rückfragen-Zähler nicht berechnet: %s", exc)
+        return 0
+
+
 @app.context_processor
 def inject_user():
-    """Macht den aktuellen User in allen Templates verfügbar."""
+    """Macht den aktuellen User und die Zahl offener Rückfragen in allen Templates verfügbar."""
     user = None
     if "user_id" in session:
         user = get_user(session["user_id"])
-    return {"current_user": user}
+    return {"current_user": user, "rueckfragen_nav_count": _offene_rueckfragen(user) if user else 0}
 
 
 # ─── Hilfsfunktionen ─────────────────────────────────────
