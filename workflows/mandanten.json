@@ -1,0 +1,28 @@
+{
+  "mandanten": [
+    {
+      "id": "DEMO",
+      "name": "Müller & Partner Steuerberatung GmbH",
+      "kontenrahmen": "SKR03",
+      "berater_nr": "88001",
+      "mandant_nr": "10001",
+      "inbox": "inbox/DEMO",
+      "outbox": "outbox/DEMO",
+      "archiv": "archiv/DEMO",
+      "eigene_regeln": [],
+      "notizen": "Demo-Mandant — Steuerberatungskanzlei"
+    },
+    {
+      "id": "DEMO2",
+      "name": "Kanzlei Bauer & Schmidt GbR",
+      "kontenrahmen": "SKR03",
+      "berater_nr": "88001",
+      "mandant_nr": "10002",
+      "inbox": "inbox/DEMO2",
+      "outbox": "outbox/DEMO2",
+      "archiv": "archiv/DEMO2",
+      "eigene_regeln": [],
+      "notizen": "Demo-Mandant 2 — kleinere Kanzlei"
+    }
+  ]
+}
