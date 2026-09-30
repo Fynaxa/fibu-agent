@@ -1071,25 +1071,28 @@ def inbound_mail():
     import time
     from tools.config import MAILGUN_SIGNING_KEY, INBOX_DIR, get_mandant, mandant_dirs
 
-    # Mailgun-Signatur prüfen wenn Signing Key konfiguriert
-    if MAILGUN_SIGNING_KEY:
-        token     = request.form.get("token", "")
-        timestamp = request.form.get("timestamp", "")
-        signature = request.form.get("signature", "")
-        expected  = hmac.new(
-            key=MAILGUN_SIGNING_KEY.encode(),
-            msg=(timestamp + token).encode(),
-            digestmod=hashlib.sha256,
-        ).hexdigest()
-        if not hmac.compare_digest(signature, expected):
-            logger.warning("Mailgun Webhook: ungültige Signatur von %s", request.remote_addr)
-            return jsonify({"error": "invalid signature"}), 403
-        # Replay-Schutz: Timestamp darf nicht älter als 5 Minuten sein
-        try:
-            if abs(int(time.time()) - int(timestamp)) > 300:
-                return jsonify({"error": "timestamp expired"}), 403
-        except ValueError:
-            return jsonify({"error": "invalid timestamp"}), 400
+    # Fail-closed: ohne Signing Key wird der Webhook nicht angenommen. Sonst könnte
+    # jeder, der die Adresse kennt, Belege in einen Mandanten einschleusen.
+    if not MAILGUN_SIGNING_KEY:
+        logger.warning("Mailgun Webhook: MAILGUN_SIGNING_KEY fehlt, Anfrage von %s abgelehnt", request.remote_addr)
+        return jsonify({"error": "webhook not configured"}), 503
+    token     = request.form.get("token", "")
+    timestamp = request.form.get("timestamp", "")
+    signature = request.form.get("signature", "")
+    expected  = hmac.new(
+        key=MAILGUN_SIGNING_KEY.encode(),
+        msg=(timestamp + token).encode(),
+        digestmod=hashlib.sha256,
+    ).hexdigest()
+    if not hmac.compare_digest(signature, expected):
+        logger.warning("Mailgun Webhook: ungültige Signatur von %s", request.remote_addr)
+        return jsonify({"error": "invalid signature"}), 403
+    # Replay-Schutz: Timestamp darf nicht älter als 5 Minuten sein
+    try:
+        if abs(int(time.time()) - int(timestamp)) > 300:
+            return jsonify({"error": "timestamp expired"}), 403
+    except ValueError:
+        return jsonify({"error": "invalid timestamp"}), 400
 
     # Empfänger-Adresse → Mandant-ID (muster@inbox.fynaxa.de → MUSTER)
     recipient  = request.form.get("recipient", "")
