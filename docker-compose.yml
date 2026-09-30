@@ -1,0 +1,40 @@
+version: "3.8"
+
+services:
+  fibu-agent:
+    build: .
+    container_name: fibu-agent
+    expose:
+      - "8080"
+    volumes:
+      - ./data/inbox:/app/inbox
+      - ./data/outbox:/app/outbox
+      - ./data/archiv:/app/archiv
+      - ./data/db:/app/data
+      - ./.tmp:/app/.tmp
+    env_file:
+      - .env
+    environment:
+      - FLASK_SECRET_KEY=${FLASK_SECRET_KEY:-change-me-in-production}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
+      - DB_PATH=/app/data/fibu_agent.db
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  nginx:
+    image: nginx:alpine
+    container_name: fibu-nginx
+    ports:
+      - "443:443"
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - fibu-agent
+    restart: unless-stopped
