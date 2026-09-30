@@ -10,7 +10,7 @@ Stand: April 2026
 
 KI-Automation-Agency
 Inhaber: Konstantin Konradi
-Buchenkamp 22, 38159 Vechelde
+c/o COCENTER, Koppoldstr. 1, 86551 Aichach
 konstantinkonradi6@gmail.com
 
 Datenschutzbeauftragter: nicht bestellt (Kleinunternehmen unter 20 Mitarbeiter, § 38 BDSG)
