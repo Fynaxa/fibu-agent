@@ -1,0 +1,162 @@
+{
+  "name": "02 — E-Mail-Eingang verarbeiten (alle 5 Min)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "minutes", "minutesInterval": 5 }]
+        }
+      },
+      "id": "schedule-2",
+      "name": "Alle 5 Minuten",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "mailbox": "INBOX",
+        "postProcessAction": "read",
+        "options": { "customEmailConfig": "={{ $env.IMAP_HOST }}" }
+      },
+      "id": "imap-read",
+      "name": "E-Mails abrufen",
+      "type": "n8n-nodes-base.imap",
+      "typeVersion": 2,
+      "position": [220, 0],
+      "credentials": { "imap": { "id": "imap-cred", "name": "IMAP E-Mail" } }
+    },
+    {
+      "parameters": {
+        "model": "claude-sonnet-4-6",
+        "prompt": "Analysiere die folgende eingehende E-Mail und kategorisiere sie.\n\nVon: {{ $json.from }}\nBetreff: {{ $json.subject }}\nInhalt:\n{{ $json.text }}\n\nKategorien:\n- ANFRAGE: Jemand interessiert sich für unsere KI-Automatisierungsdienstleistung\n- SUPPORT: Bestehender Kunde hat eine Frage oder ein Problem\n- BELEG: Kunde sendet Belege/Rechnungen zur Verarbeitung\n- RECHNUNG: Eingehende Rechnung an uns\n- SPAM: Werbung, Newsletter, irrelevant\n- SONSTIGES: Alles andere\n\nAntworte als JSON:\n{\n  \"kategorie\": \"<ANFRAGE|SUPPORT|BELEG|RECHNUNG|SPAM|SONSTIGES>\",\n  \"zusammenfassung\": \"<1 Satz>\",\n  \"dringlichkeit\": \"<hoch|mittel|niedrig>\",\n  \"auto_antwort_moeglich\": true/false,\n  \"vorgeschlagene_antwort\": \"<Antworttext falls auto_antwort_moeglich>\"\n}",
+        "options": { "maxTokens": 600, "temperature": 0.2 }
+      },
+      "id": "claude-classify",
+      "name": "Claude: Kategorisieren",
+      "type": "@n8n/n8n-nodes-langchain.anthropicChat",
+      "typeVersion": 1,
+      "position": [440, 0],
+      "credentials": { "anthropicApi": { "id": "anthropic-cred", "name": "Anthropic" } }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "rules": [
+            { "outputKey": "anfrage", "conditions": { "string": [{ "value1": "={{ $json.kategorie }}", "value2": "ANFRAGE" }] } },
+            { "outputKey": "support", "conditions": { "string": [{ "value1": "={{ $json.kategorie }}", "value2": "SUPPORT" }] } },
+            { "outputKey": "beleg", "conditions": { "string": [{ "value1": "={{ $json.kategorie }}", "value2": "BELEG" }] } },
+            { "outputKey": "spam", "conditions": { "string": [{ "value1": "={{ $json.kategorie }}", "value2": "SPAM" }] } },
+            { "outputKey": "sonstiges" }
+          ]
+        }
+      },
+      "id": "switch-kategorie",
+      "name": "Kategorie-Weiche",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "sheetId": { "mode": "list", "value": "={{ $env.GSHEET_CRM_ID }}" },
+        "sheetName": "Leads",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "firma": "={{ $json.from }}",
+            "email": "={{ $json.from }}",
+            "status": "inbound-anfrage",
+            "quelle": "E-Mail",
+            "notizen": "={{ $json.zusammenfassung }}",
+            "erstellt_am": "={{ $now.format('yyyy-MM-dd') }}"
+          }
+        }
+      },
+      "id": "sheets-neue-anfrage",
+      "name": "Anfrage → CRM",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [900, -200],
+      "credentials": { "googleSheetsOAuth2Api": { "id": "google-cred", "name": "Google Sheets" } }
+    },
+    {
+      "parameters": {
+        "model": "claude-sonnet-4-6",
+        "prompt": "Du bist der freundliche Vertriebsassistent einer KI-Automatisierungsagentur.\n\nEingehende Anfrage von {{ $json.from }}:\nBetreff: {{ $json.subject }}\nInhalt: {{ $json.text }}\n\nSchreibe eine professionelle Antwort-E-Mail:\n- Bedanke dich für das Interesse\n- Bestätige, dass du die Anfrage erhalten hast\n- Biete einen 15-Min-Termin an (Link: {{ $env.CALENDLY_LINK }})\n- Nenne 2-3 relevante Vorteile deiner Dienstleistung\n- Maximal 120 Wörter\n- Deutsch, professionell, warmherzig\n\nAntworte als JSON:\n{\"betreff\": \"Re: {{ $json.subject }}\", \"antwort\": \"<text>\"}",
+        "options": { "maxTokens": 500, "temperature": 0.5 }
+      },
+      "id": "claude-antwort-anfrage",
+      "name": "Claude: Anfrage beantworten",
+      "type": "@n8n/n8n-nodes-langchain.anthropicChat",
+      "typeVersion": 1,
+      "position": [1120, -200],
+      "credentials": { "anthropicApi": { "id": "anthropic-cred", "name": "Anthropic" } }
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.SMTP_FROM }}",
+        "toEmail": "={{ $json.from }}",
+        "subject": "={{ $json.betreff }}",
+        "text": "={{ $json.antwort }}",
+        "options": {}
+      },
+      "id": "smtp-anfrage-antwort",
+      "name": "Antwort senden",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1340, -200],
+      "credentials": { "smtp": { "id": "smtp-cred", "name": "SMTP" } }
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.SMTP_FROM }}",
+        "toEmail": "={{ $json.from }}",
+        "subject": "={{ 'Re: ' + $json.subject }}",
+        "text": "={{ $json.vorgeschlagene_antwort }}",
+        "options": {}
+      },
+      "id": "smtp-support-antwort",
+      "name": "Support-Antwort senden",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [900, -50],
+      "credentials": { "smtp": { "id": "smtp-cred", "name": "SMTP" } }
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.SMTP_FROM }}",
+        "toEmail": "={{ $env.ADMIN_EMAIL }}",
+        "subject": "={{ '[FiBu-Agent] Weiterleitung: ' + $json.subject }}",
+        "text": "={{ 'Von: ' + $json.from + '\\n\\nKategorie: ' + $json.kategorie + '\\nZusammenfassung: ' + $json.zusammenfassung + '\\n\\n---\\n\\n' + $json.text }}",
+        "options": {}
+      },
+      "id": "smtp-weiterleitung",
+      "name": "An dich weiterleiten",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [900, 200],
+      "credentials": { "smtp": { "id": "smtp-cred", "name": "SMTP" } }
+    }
+  ],
+  "connections": {
+    "Alle 5 Minuten": { "main": [[{ "node": "E-Mails abrufen", "type": "main", "index": 0 }]] },
+    "E-Mails abrufen": { "main": [[{ "node": "Claude: Kategorisieren", "type": "main", "index": 0 }]] },
+    "Claude: Kategorisieren": { "main": [[{ "node": "Kategorie-Weiche", "type": "main", "index": 0 }]] },
+    "Kategorie-Weiche": {
+      "main": [
+        [{ "node": "Anfrage → CRM", "type": "main", "index": 0 }],
+        [{ "node": "Support-Antwort senden", "type": "main", "index": 0 }],
+        [],
+        [],
+        [{ "node": "An dich weiterleiten", "type": "main", "index": 0 }]
+      ]
+    },
+    "Anfrage → CRM": { "main": [[{ "node": "Claude: Anfrage beantworten", "type": "main", "index": 0 }]] },
+    "Claude: Anfrage beantworten": { "main": [[{ "node": "Antwort senden", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true },
+  "active": false,
+  "tags": [{ "name": "Sales" }]
+}

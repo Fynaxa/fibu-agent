@@ -1,0 +1,246 @@
+{
+  "name": "13 — Social-Media-Content (Mo/Mi/Fr)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "cronExpression", "expression": "0 7 * * 1,3,5" }] }
+      },
+      "id": "schedule-13",
+      "name": "Mo/Mi/Fr 7:00 Uhr",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "sheetId": { "mode": "list", "value": "={{ $env.GSHEET_CRM_ID }}" },
+        "sheetName": "Content-Kalender",
+        "options": {}
+      },
+      "id": "sheets-kalender",
+      "name": "Content-Kalender laden",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [220, 0],
+      "credentials": { "googleSheetsOAuth2Api": { "id": "google-cred", "name": "Google Sheets" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "const eintraege = $input.all();\nconst heute = new Date().toISOString().slice(0, 10);\n\n// Finde den Eintrag für heute\nconst heuteEintrag = eintraege.find(e => e.json.datum === heute && e.json.status !== 'gepostet');\n\nif (heuteEintrag) {\n  return [heuteEintrag];\n}\n\n// Kein geplanter Content — generiere Thema basierend auf Wochentag\nconst wochentag = new Date().getDay();\nconst themen = {\n  1: { typ: 'tipp', thema: 'Praxis-Tipp zur Buchhaltungsautomatisierung', plattformen: ['linkedin', 'instagram'] },\n  3: { typ: 'case_study', thema: 'Fallstudie: Wie KI die Belegverarbeitung verändert', plattformen: ['linkedin', 'youtube'] },\n  5: { typ: 'behind_scenes', thema: 'Behind-the-Scenes: So arbeitet unser KI-Agent', plattformen: ['instagram', 'tiktok', 'x'] }\n};\n\nconst t = themen[wochentag] || themen[1];\nreturn [{ json: { ...t, datum: heute, status: 'auto_generiert' } }];"
+      },
+      "id": "code-thema",
+      "name": "Thema bestimmen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "model": "claude-sonnet-4-6",
+        "prompt": "Du bist der Content-Manager einer KI-Automatisierungsagentur, die den FiBu-Agent anbietet (automatische Belegverarbeitung für Steuerberater und KMU).\n\nErstelle Content für heute.\n\nThema: {{ $json.thema }}\nTyp: {{ $json.typ }}\nPlattformen: {{ JSON.stringify($json.plattformen) }}\n\nErstelle für JEDE Plattform einen angepassten Post:\n\n**LinkedIn** (falls enthalten):\n- Professionell, Thought Leadership\n- 150-250 Wörter\n- 3-5 relevante Hashtags\n- Hook in der ersten Zeile\n- Call-to-Action am Ende\n\n**Instagram** (falls enthalten):\n- Kurz, visuell beschrieben (Carousel-Idee oder Single Image Beschreibung)\n- 100-150 Wörter Caption\n- 15-20 Hashtags (Mix aus Nische und Reichweite)\n- Emoji-Einsatz\n\n**TikTok** (falls enthalten):\n- Skript für 30-60 Sek Video\n- Hook in den ersten 3 Sekunden\n- Trend-Format (z.B. \"3 Dinge die dein Steuerberater dir nicht sagt\")\n- Locker, Du-Form\n\n**X/Twitter** (falls enthalten):\n- Max. 280 Zeichen Hauptpost\n- Optional: Thread mit 3-4 Tweets\n- Provokante These oder Statistik als Hook\n\n**YouTube** (falls enthalten):\n- Titel (max. 60 Zeichen, SEO-optimiert)\n- Beschreibung (200 Wörter)\n- Skript-Outline für 3-5 Min Video\n- Thumbnail-Beschreibung\n\nThemen-Ideen nach Typ:\n- tipp: Konkreter Automatisierungstipp, den der Zuschauer sofort umsetzen kann\n- case_study: Vorher/Nachher-Vergleich, Zeitersparnis, ROI-Rechnung\n- behind_scenes: Wie die KI einen Beleg verarbeitet, Tech-Stack-Einblick\n\nSprache: Deutsch\nZielgruppe: Geschäftsführer KMU, Steuerberater, Tech-affine Unternehmer\n\nAntworte als JSON:\n{\n  \"linkedin\": { \"text\": \"...\", \"hashtags\": \"...\" },\n  \"instagram\": { \"caption\": \"...\", \"hashtags\": \"...\", \"bild_beschreibung\": \"...\" },\n  \"tiktok\": { \"skript\": \"...\", \"hook\": \"...\", \"hashtags\": \"...\" },\n  \"x\": { \"tweet\": \"...\", \"thread\": [\"...\"] },\n  \"youtube\": { \"titel\": \"...\", \"beschreibung\": \"...\", \"outline\": [\"...\"], \"thumbnail\": \"...\" }\n}\n\nNur die Plattformen ausfüllen die in der Liste stehen. Andere weglassen.",
+        "options": { "maxTokens": 2000, "temperature": 0.8 }
+      },
+      "id": "claude-content",
+      "name": "Claude: Content generieren",
+      "type": "@n8n/n8n-nodes-langchain.anthropicChat",
+      "typeVersion": 1,
+      "position": [660, 0],
+      "credentials": { "anthropicApi": { "id": "anthropic-cred", "name": "Anthropic" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "const content = $input.first().json;\nconst plattformen = $('Thema bestimmen').first().json.plattformen || [];\nconst results = [];\n\nfor (const p of plattformen) {\n  if (content[p]) {\n    results.push({ json: { plattform: p, content: content[p], datum: new Date().toISOString().slice(0, 10) } });\n  }\n}\n\nreturn results;"
+      },
+      "id": "code-split",
+      "name": "Pro Plattform aufteilen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 0]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "rules": [
+            { "outputKey": "linkedin", "conditions": { "string": [{ "value1": "={{ $json.plattform }}", "value2": "linkedin" }] } },
+            { "outputKey": "instagram", "conditions": { "string": [{ "value1": "={{ $json.plattform }}", "value2": "instagram" }] } },
+            { "outputKey": "tiktok", "conditions": { "string": [{ "value1": "={{ $json.plattform }}", "value2": "tiktok" }] } },
+            { "outputKey": "x", "conditions": { "string": [{ "value1": "={{ $json.plattform }}", "value2": "x" }] } },
+            { "outputKey": "youtube" }
+          ]
+        }
+      },
+      "id": "switch-plattform",
+      "name": "Plattform-Weiche",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [1100, 0]
+    },
+    {
+      "parameters": {
+        "url": "https://api.linkedin.com/v2/ugcPosts",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "={{ 'Bearer ' + $env.LINKEDIN_ACCESS_TOKEN }}" },
+            { "name": "X-Restli-Protocol-Version", "value": "2.0.0" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ author: 'urn:li:person:' + $env.LINKEDIN_PERSON_ID, lifecycleState: 'PUBLISHED', specificContent: { 'com.linkedin.ugc.ShareContent': { shareCommentary: { text: $json.content.text + '\\n\\n' + $json.content.hashtags }, shareMediaCategory: 'NONE' } }, visibility: { 'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC' } }) }}",
+        "options": {}
+      },
+      "id": "http-linkedin",
+      "name": "LinkedIn posten",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1340, -300],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "url": "={{ 'https://graph.facebook.com/v19.0/' + $env.INSTAGRAM_BUSINESS_ID + '/media' }}",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "caption", "value": "={{ $json.content.caption + '\\n\\n' + $json.content.hashtags }}" },
+            { "name": "image_url", "value": "={{ $json.content.bild_url || $env.DEFAULT_IMAGE_URL }}" },
+            { "name": "access_token", "value": "={{ $env.INSTAGRAM_ACCESS_TOKEN }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "http-instagram-create",
+      "name": "Instagram: Media erstellen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1340, -150],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "url": "={{ 'https://graph.facebook.com/v19.0/' + $env.INSTAGRAM_BUSINESS_ID + '/media_publish' }}",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "creation_id", "value": "={{ $json.id }}" },
+            { "name": "access_token", "value": "={{ $env.INSTAGRAM_ACCESS_TOKEN }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "http-instagram-publish",
+      "name": "Instagram: Veröffentlichen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1560, -150],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "url": "https://api.twitter.com/2/tweets",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "={{ 'Bearer ' + $env.X_BEARER_TOKEN }}" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ text: $json.content.tweet }) }}",
+        "options": {}
+      },
+      "id": "http-x-tweet",
+      "name": "X/Twitter posten",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1340, 0],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.WEBHOOK_URL || 'http://n8n:5678' }}/webhook/video-generieren",
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ plattform: 'youtube', thema: $json.content.titel || $json.content.youtube?.titel, typ: $('Thema bestimmen').first().json.typ, video_provider: $env.VIDEO_PROVIDER || 'heygen' }) }}",
+        "options": { "timeout": 10000 }
+      },
+      "id": "http-youtube-video",
+      "name": "YouTube: Video generieren (13a)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1340, 150],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.WEBHOOK_URL || 'http://n8n:5678' }}/webhook/video-generieren",
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ plattform: 'tiktok', thema: $json.content.hook || $json.content.tiktok?.hook, typ: $('Thema bestimmen').first().json.typ, video_provider: $env.VIDEO_PROVIDER || 'heygen' }) }}",
+        "options": { "timeout": 10000 }
+      },
+      "id": "http-tiktok-video",
+      "name": "TikTok: Video generieren (13a)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1340, 300],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "sheetId": { "mode": "list", "value": "={{ $env.GSHEET_CRM_ID }}" },
+        "sheetName": "Content-Log",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "datum": "={{ $json.datum }}",
+            "plattform": "={{ $json.plattform }}",
+            "status": "gepostet",
+            "typ": "={{ $('Thema bestimmen').first().json.typ }}",
+            "thema": "={{ $('Thema bestimmen').first().json.thema }}"
+          }
+        }
+      },
+      "id": "sheets-content-log",
+      "name": "Content protokollieren",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1560, 0],
+      "credentials": { "googleSheetsOAuth2Api": { "id": "google-cred", "name": "Google Sheets" } }
+    }
+  ],
+  "connections": {
+    "Mo/Mi/Fr 7:00 Uhr": { "main": [[{ "node": "Content-Kalender laden", "type": "main", "index": 0 }]] },
+    "Content-Kalender laden": { "main": [[{ "node": "Thema bestimmen", "type": "main", "index": 0 }]] },
+    "Thema bestimmen": { "main": [[{ "node": "Claude: Content generieren", "type": "main", "index": 0 }]] },
+    "Claude: Content generieren": { "main": [[{ "node": "Pro Plattform aufteilen", "type": "main", "index": 0 }]] },
+    "Pro Plattform aufteilen": { "main": [[{ "node": "Plattform-Weiche", "type": "main", "index": 0 }]] },
+    "Plattform-Weiche": {
+      "main": [
+        [{ "node": "LinkedIn posten", "type": "main", "index": 0 }],
+        [{ "node": "Instagram: Media erstellen", "type": "main", "index": 0 }],
+        [{ "node": "TikTok: Video generieren (13a)", "type": "main", "index": 0 }],
+        [{ "node": "X/Twitter posten", "type": "main", "index": 0 }],
+        [{ "node": "YouTube: Video generieren (13a)", "type": "main", "index": 0 }]
+      ]
+    },
+    "LinkedIn posten": { "main": [[{ "node": "Content protokollieren", "type": "main", "index": 0 }]] },
+    "Instagram: Media erstellen": { "main": [[{ "node": "Instagram: Veröffentlichen", "type": "main", "index": 0 }]] },
+    "Instagram: Veröffentlichen": { "main": [[{ "node": "Content protokollieren", "type": "main", "index": 0 }]] },
+    "X/Twitter posten": { "main": [[{ "node": "Content protokollieren", "type": "main", "index": 0 }]] },
+    "YouTube: Video generieren (13a)": { "main": [[{ "node": "Content protokollieren", "type": "main", "index": 0 }]] },
+    "TikTok: Video generieren (13a)": { "main": [[{ "node": "Content protokollieren", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "active": false,
+  "tags": [{ "name": "Marketing" }]
+}

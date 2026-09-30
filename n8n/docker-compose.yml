@@ -1,0 +1,111 @@
+version: "3.8"
+
+services:
+  # ─── n8n (Workflow-Engine, das Herz des Systems) ───
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${N8N_USER:-admin}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD:-change-me}
+      - N8N_HOST=${N8N_HOST:-localhost}
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=https
+      - WEBHOOK_URL=https://${N8N_HOST:-localhost}:5678/
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=n8n
+      - DB_POSTGRESDB_USER=n8n
+      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD:-n8n-secret}
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY:-change-this-encryption-key}
+      - GENERIC_TIMEZONE=Europe/Berlin
+      - N8N_DEFAULT_LOCALE=de
+      # API-Zugang (damit Claude Workflows erstellen kann)
+      - N8N_PUBLIC_API_DISABLED=false
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./workflows:/home/node/workflows:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - fibu-network
+
+  # ─── PostgreSQL (Datenbank für n8n) ───
+  postgres:
+    image: postgres:16-alpine
+    container_name: fibu-postgres
+    environment:
+      - POSTGRES_USER=n8n
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-n8n-secret}
+      - POSTGRES_DB=n8n
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U n8n"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - fibu-network
+
+  # ─── FiBu-Agent (Delivery-Service) ───
+  fibu-agent:
+    build:
+      context: ../
+      dockerfile: Dockerfile
+    container_name: fibu-agent
+    expose:
+      - "8080"
+    volumes:
+      - ../data/inbox:/app/inbox
+      - ../data/outbox:/app/outbox
+      - ../data/archiv:/app/archiv
+      - ../data/db:/app/data
+      - ../.tmp:/app/.tmp
+    env_file:
+      - ../.env
+    environment:
+      - FLASK_SECRET_KEY=${FLASK_SECRET_KEY:-change-me-in-production}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
+      - DB_PATH=/app/data/fibu_agent.db
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - fibu-network
+
+  # ─── nginx (Reverse Proxy + SSL) ───
+  nginx:
+    image: nginx:alpine
+    container_name: fibu-nginx
+    ports:
+      - "443:443"
+      - "80:80"
+    volumes:
+      - ../nginx/nginx-full.conf:/etc/nginx/conf.d/default.conf:ro
+      - ../nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - fibu-agent
+      - n8n
+    restart: unless-stopped
+    networks:
+      - fibu-network
+
+volumes:
+  n8n_data:
+  postgres_data:
+
+networks:
+  fibu-network:
+    driver: bridge

@@ -1,0 +1,99 @@
+{
+  "name": "11 — Tägliches Backup (3:00 nachts)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "hours", "hoursInterval": 24, "triggerAtHour": 3 }] }
+      },
+      "id": "schedule-11",
+      "name": "Täglich 3:00 Uhr",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "command": "cd /app && python -c \"from tools.backup import backup_database; result = backup_database(); print(result)\"",
+        "cwd": "/app"
+      },
+      "id": "exec-backup-db",
+      "name": "Datenbank-Backup",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [220, -100]
+    },
+    {
+      "parameters": {
+        "command": "tar -czf /app/.tmp/archiv_backup_$(date +%Y%m%d).tar.gz -C /app archiv/ 2>&1 && echo 'OK' || echo 'FEHLER'",
+        "cwd": "/app"
+      },
+      "id": "exec-backup-archiv",
+      "name": "Archiv-Backup (tar.gz)",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [220, 100]
+    },
+    {
+      "parameters": {
+        "command": "find /app/.tmp -name 'archiv_backup_*.tar.gz' -mtime +30 -delete 2>&1; find /app/.tmp -name 'backup_*.db' -mtime +30 -delete 2>&1; echo 'Alte Backups bereinigt'",
+        "cwd": "/app"
+      },
+      "id": "exec-cleanup",
+      "name": "Alte Backups löschen (>30 Tage)",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const dbResult = $('Datenbank-Backup').first().json.stdout || 'unbekannt';\nconst archivResult = $('Archiv-Backup (tar.gz)').first().json.stdout || 'unbekannt';\nconst cleanupResult = $('Alte Backups löschen (>30 Tage)').first().json.stdout || 'unbekannt';\n\nconst success = !dbResult.includes('FEHLER') && !archivResult.includes('FEHLER');\n\nreturn [{\n  json: {\n    success,\n    db_backup: dbResult.trim(),\n    archiv_backup: archivResult.trim(),\n    cleanup: cleanupResult.trim(),\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "code-result",
+      "name": "Ergebnis zusammenfassen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [{ "value1": "={{ $json.success }}", "value2": false }]
+        }
+      },
+      "id": "if-fehler",
+      "name": "Backup fehlgeschlagen?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [880, 0]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.SMTP_FROM }}",
+        "toEmail": "={{ $env.ADMIN_EMAIL }}",
+        "subject": "🔴 BACKUP FEHLGESCHLAGEN",
+        "text": "={{ 'Backup-Fehler am ' + $json.timestamp + '\\n\\nDB: ' + $json.db_backup + '\\nArchiv: ' + $json.archiv_backup + '\\nCleanup: ' + $json.cleanup }}",
+        "options": {}
+      },
+      "id": "smtp-backup-fehler",
+      "name": "Fehler-Alert",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1100, -100],
+      "credentials": { "smtp": { "id": "smtp-cred", "name": "SMTP" } }
+    }
+  ],
+  "connections": {
+    "Täglich 3:00 Uhr": { "main": [[
+      { "node": "Datenbank-Backup", "type": "main", "index": 0 },
+      { "node": "Archiv-Backup (tar.gz)", "type": "main", "index": 0 }
+    ]] },
+    "Datenbank-Backup": { "main": [[{ "node": "Alte Backups löschen (>30 Tage)", "type": "main", "index": 0 }]] },
+    "Archiv-Backup (tar.gz)": { "main": [[{ "node": "Alte Backups löschen (>30 Tage)", "type": "main", "index": 0 }]] },
+    "Alte Backups löschen (>30 Tage)": { "main": [[{ "node": "Ergebnis zusammenfassen", "type": "main", "index": 0 }]] },
+    "Ergebnis zusammenfassen": { "main": [[{ "node": "Backup fehlgeschlagen?", "type": "main", "index": 0 }]] },
+    "Backup fehlgeschlagen?": { "main": [[{ "node": "Fehler-Alert", "type": "main", "index": 0 }], []] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "active": false,
+  "tags": [{ "name": "Ops" }]
+}

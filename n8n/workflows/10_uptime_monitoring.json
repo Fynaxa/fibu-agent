@@ -1,0 +1,101 @@
+{
+  "name": "10 — Uptime-Monitoring (alle 5 Min)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "minutes", "minutesInterval": 5 }] }
+      },
+      "id": "schedule-10",
+      "name": "Alle 5 Minuten",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "url": "http://fibu-agent:8080/health",
+        "options": { "timeout": 10000, "allowUnauthorizedCerts": true }
+      },
+      "id": "health-fibu",
+      "name": "FiBu-Agent Check",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 0],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const result = $input.first();\nconst healthy = result.json?.healthy === true;\nconst statusCode = result.json?.$response?.statusCode || 0;\n\n// Prüfe ob n8n selbst genug Speicher hat\nconst memUsage = process.memoryUsage();\nconst memMB = Math.round(memUsage.heapUsed / 1024 / 1024);\n\nreturn [{\n  json: {\n    fibu_healthy: healthy,\n    fibu_status_code: statusCode,\n    fibu_details: result.json || 'nicht erreichbar',\n    n8n_memory_mb: memMB,\n    timestamp: new Date().toISOString(),\n    alert_needed: !healthy || memMB > 1500\n  }\n}];"
+      },
+      "id": "code-check",
+      "name": "Status auswerten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [{ "value1": "={{ $json.alert_needed }}", "value2": true }]
+        }
+      },
+      "id": "if-alert",
+      "name": "Alert nötig?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.SMTP_FROM }}",
+        "toEmail": "={{ $env.ADMIN_EMAIL }}",
+        "subject": "🔴 SYSTEM-ALERT: FiBu-Agent Problem",
+        "text": "={{ 'ALERT — ' + $json.timestamp + '\\n\\n' + 'FiBu-Agent healthy: ' + $json.fibu_healthy + '\\n' + 'HTTP Status: ' + $json.fibu_status_code + '\\n' + 'n8n Memory: ' + $json.n8n_memory_mb + ' MB\\n\\n' + 'Details: ' + JSON.stringify($json.fibu_details, null, 2) + '\\n\\nAktion: docker compose logs fibu-agent' }}",
+        "options": {}
+      },
+      "id": "smtp-alert",
+      "name": "Alert senden",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [880, -100],
+      "credentials": { "smtp": { "id": "smtp-cred", "name": "SMTP" } }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "sheetId": { "mode": "list", "value": "={{ $env.GSHEET_CRM_ID }}" },
+        "sheetName": "Uptime-Log",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "zeitpunkt": "={{ $json.timestamp }}",
+            "fibu_ok": "={{ $json.fibu_healthy }}",
+            "n8n_mem_mb": "={{ $json.n8n_memory_mb }}",
+            "alert": "={{ $json.alert_needed }}"
+          }
+        }
+      },
+      "id": "sheets-uptime-log",
+      "name": "Uptime protokollieren",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [880, 100],
+      "credentials": { "googleSheetsOAuth2Api": { "id": "google-cred", "name": "Google Sheets" } }
+    }
+  ],
+  "connections": {
+    "Alle 5 Minuten": { "main": [[{ "node": "FiBu-Agent Check", "type": "main", "index": 0 }]] },
+    "FiBu-Agent Check": { "main": [[{ "node": "Status auswerten", "type": "main", "index": 0 }]] },
+    "Status auswerten": { "main": [[{ "node": "Alert nötig?", "type": "main", "index": 0 }]] },
+    "Alert nötig?": {
+      "main": [
+        [{ "node": "Alert senden", "type": "main", "index": 0 }],
+        [{ "node": "Uptime protokollieren", "type": "main", "index": 0 }]
+      ]
+    },
+    "Alert senden": { "main": [[{ "node": "Uptime protokollieren", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "active": false,
+  "tags": [{ "name": "Ops" }]
+}

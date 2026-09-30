@@ -1,0 +1,134 @@
+{
+  "name": "08 — Mahnwesen (täglich 9:00)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "hours", "hoursInterval": 24, "triggerAtHour": 9 }] }
+      },
+      "id": "schedule-8",
+      "name": "Täglich 9:00 Uhr",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "sheetId": { "mode": "list", "value": "={{ $env.GSHEET_CRM_ID }}" },
+        "sheetName": "Rechnungen",
+        "options": {}
+      },
+      "id": "sheets-rechnungen",
+      "name": "Rechnungen laden",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [220, 0],
+      "credentials": { "googleSheetsOAuth2Api": { "id": "google-cred", "name": "Google Sheets" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rechnungen = $input.all();\nconst now = new Date();\nconst results = [];\n\nfor (const r of rechnungen) {\n  if (r.json.status === 'bezahlt') continue;\n  \n  const datum = new Date(r.json.datum);\n  const tage = Math.floor((now - datum) / (1000 * 60 * 60 * 24));\n  \n  let aktion = null;\n  if (r.json.status === 'versendet' && tage >= 14) aktion = 'zahlungserinnerung';\n  else if (r.json.status === 'zahlungserinnerung' && tage >= 30) aktion = 'mahnung_1';\n  else if (r.json.status === 'mahnung_1' && tage >= 45) aktion = 'mahnung_2';\n  else if (r.json.status === 'mahnung_2' && tage >= 60) aktion = 'eskalation';\n  \n  if (aktion) {\n    results.push({ json: { ...r.json, aktion, tage_offen: tage } });\n  }\n}\n\nreturn results;"
+      },
+      "id": "code-faellig",
+      "name": "Überfällige filtern",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "rules": [
+            { "outputKey": "erinnerung", "conditions": { "string": [{ "value1": "={{ $json.aktion }}", "value2": "zahlungserinnerung" }] } },
+            { "outputKey": "mahnung1", "conditions": { "string": [{ "value1": "={{ $json.aktion }}", "value2": "mahnung_1" }] } },
+            { "outputKey": "mahnung2", "conditions": { "string": [{ "value1": "={{ $json.aktion }}", "value2": "mahnung_2" }] } },
+            { "outputKey": "eskalation" }
+          ]
+        }
+      },
+      "id": "switch-aktion",
+      "name": "Mahnstufe",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "model": "claude-sonnet-4-6",
+        "prompt": "Schreibe eine {{ $json.aktion === 'zahlungserinnerung' ? 'freundliche Zahlungserinnerung' : $json.aktion === 'mahnung_1' ? 'erste Mahnung (bestimmt aber höflich)' : 'zweite Mahnung (deutlich, Fristsetzung 7 Tage)' }}.\n\nKunde: {{ $json.kunde }}\nRechnungsnummer: {{ $json.rechnungsnummer }}\nBetrag: {{ $json.brutto }} € (brutto)\nRechnungsdatum: {{ $json.datum }}\nTage offen: {{ $json.tage_offen }}\n\nRegeln:\n- Deutsch, Sie-Form, professionell\n- Zahlungserinnerung: freundlich, \"vielleicht übersehen\"\n- Mahnung 1: sachlich, Zahlungsziel 14 Tage\n- Mahnung 2: deutlich, Frist 7 Tage, Hinweis auf mögliche Konsequenzen\n- Bankverbindung: {{ $env.FIRMA_IBAN }}\n- Max. 100 Wörter\n\nAntworte als JSON:\n{\"betreff\": \"...\", \"email_text\": \"...\"}",
+        "options": { "maxTokens": 500, "temperature": 0.3 }
+      },
+      "id": "claude-mahnung",
+      "name": "Claude: Mahntext",
+      "type": "@n8n/n8n-nodes-langchain.anthropicChat",
+      "typeVersion": 1,
+      "position": [900, -100],
+      "credentials": { "anthropicApi": { "id": "anthropic-cred", "name": "Anthropic" } }
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.SMTP_FROM }}",
+        "toEmail": "={{ $json.email }}",
+        "subject": "={{ $json.betreff }}",
+        "text": "={{ $json.email_text }}",
+        "options": {}
+      },
+      "id": "smtp-mahnung",
+      "name": "Mahnung senden",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1120, -100],
+      "credentials": { "smtp": { "id": "smtp-cred", "name": "SMTP" } }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "sheetId": { "mode": "list", "value": "={{ $env.GSHEET_CRM_ID }}" },
+        "sheetName": "Rechnungen",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": { "status": "={{ $json.aktion }}" }
+        }
+      },
+      "id": "sheets-status-update",
+      "name": "Rechnungsstatus aktualisieren",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1340, -100],
+      "credentials": { "googleSheetsOAuth2Api": { "id": "google-cred", "name": "Google Sheets" } }
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.SMTP_FROM }}",
+        "toEmail": "={{ $env.ADMIN_EMAIL }}",
+        "subject": "={{ '⚠️ ESKALATION: ' + $json.kunde + ' — ' + $json.rechnungsnummer + ' (' + $json.brutto + ' €, ' + $json.tage_offen + ' Tage offen)' }}",
+        "text": "={{ 'Rechnung ' + $json.rechnungsnummer + ' von ' + $json.kunde + ' ist seit ' + $json.tage_offen + ' Tagen offen (Brutto: ' + $json.brutto + ' €).\\n\\n2 Mahnungen wurden versendet. Bitte manuell handeln:\\n- Telefonisch kontaktieren\\n- Ggf. Inkasso einleiten\\n- Oder Forderung abschreiben' }}",
+        "options": {}
+      },
+      "id": "smtp-eskalation",
+      "name": "Eskalation an dich",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [900, 200],
+      "credentials": { "smtp": { "id": "smtp-cred", "name": "SMTP" } }
+    }
+  ],
+  "connections": {
+    "Täglich 9:00 Uhr": { "main": [[{ "node": "Rechnungen laden", "type": "main", "index": 0 }]] },
+    "Rechnungen laden": { "main": [[{ "node": "Überfällige filtern", "type": "main", "index": 0 }]] },
+    "Überfällige filtern": { "main": [[{ "node": "Mahnstufe", "type": "main", "index": 0 }]] },
+    "Mahnstufe": {
+      "main": [
+        [{ "node": "Claude: Mahntext", "type": "main", "index": 0 }],
+        [{ "node": "Claude: Mahntext", "type": "main", "index": 0 }],
+        [{ "node": "Claude: Mahntext", "type": "main", "index": 0 }],
+        [{ "node": "Eskalation an dich", "type": "main", "index": 0 }]
+      ]
+    },
+    "Claude: Mahntext": { "main": [[{ "node": "Mahnung senden", "type": "main", "index": 0 }]] },
+    "Mahnung senden": { "main": [[{ "node": "Rechnungsstatus aktualisieren", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "active": false,
+  "tags": [{ "name": "Finance" }]
+}

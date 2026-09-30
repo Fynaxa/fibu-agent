@@ -1,0 +1,112 @@
+{
+  "name": "03 — Sales Follow-up (täglich)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "hours", "hoursInterval": 24, "triggerAtHour": 10 }] }
+      },
+      "id": "schedule-3",
+      "name": "Täglich 10:00 Uhr",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "sheetId": { "mode": "list", "value": "={{ $env.GSHEET_CRM_ID }}" },
+        "sheetName": "Leads",
+        "options": {}
+      },
+      "id": "sheets-leads-lesen",
+      "name": "Alle Leads laden",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [220, 0],
+      "credentials": { "googleSheetsOAuth2Api": { "id": "google-cred", "name": "Google Sheets" } }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            { "value1": "={{ $json.status }}", "operation": "contains", "value2": "kontaktiert" }
+          ]
+        }
+      },
+      "id": "filter-kontaktiert",
+      "name": "Nur kontaktierte Leads",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const leads = $input.all();\nconst now = new Date();\nconst results = [];\n\nfor (const item of leads) {\n  const kontaktiert = new Date(item.json.kontaktiert_am);\n  const tage = Math.floor((now - kontaktiert) / (1000 * 60 * 60 * 24));\n  \n  let followup_nr = null;\n  if (item.json.status === 'kontaktiert' && tage >= 3) followup_nr = 1;\n  else if (item.json.status === 'follow-up-1' && tage >= 7) followup_nr = 2;\n  else if (item.json.status === 'follow-up-2' && tage >= 14) followup_nr = 3;\n  \n  if (followup_nr) {\n    results.push({ json: { ...item.json, followup_nr, tage_seit_kontakt: tage } });\n  }\n}\n\nreturn results;"
+      },
+      "id": "code-followup-check",
+      "name": "Follow-up fällig?",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "model": "claude-sonnet-4-6",
+        "prompt": "Du bist Vertriebsexperte einer KI-Automatisierungsagentur.\n\nSchreibe Follow-up Nr. {{ $json.followup_nr }} für:\n- Firma: {{ $json.firma }}\n- Branche: {{ $json.branche }}\n- Stadt: {{ $json.stadt }}\n- Tage seit Erstkontakt: {{ $json.tage_seit_kontakt }}\n- Bisheriger Status: {{ $json.status }}\n\nFollow-up-Strategie:\n- Nr. 1 (nach 3 Tagen): Freundliche Erinnerung, neuer Mehrwert-Aspekt\n- Nr. 2 (nach 7 Tagen): Konkretes Fallbeispiel aus ähnlicher Branche\n- Nr. 3 (nach 14 Tagen): Letzter Versuch, Breakup-Mail mit offenem Ende\n\nRegeln:\n- Maximal 100 Wörter\n- Beziehe dich auf die erste E-Mail (\"ich hatte Ihnen letzte Woche geschrieben\")\n- Deutsch, Sie-Form\n- Kein Druck, kein Spam-Feeling\n\nAntworte als JSON:\n{\"betreff\": \"<betreff>\", \"email_text\": \"<text>\"}",
+        "options": { "maxTokens": 500, "temperature": 0.6 }
+      },
+      "id": "claude-followup",
+      "name": "Claude: Follow-up schreiben",
+      "type": "@n8n/n8n-nodes-langchain.anthropicChat",
+      "typeVersion": 1,
+      "position": [880, 0],
+      "credentials": { "anthropicApi": { "id": "anthropic-cred", "name": "Anthropic" } }
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.SMTP_FROM }}",
+        "toEmail": "={{ $json.email }}",
+        "subject": "={{ $json.betreff }}",
+        "text": "={{ $json.email_text }}",
+        "options": {}
+      },
+      "id": "smtp-followup",
+      "name": "Follow-up senden",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1100, 0],
+      "credentials": { "smtp": { "id": "smtp-cred", "name": "SMTP" } }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "sheetId": { "mode": "list", "value": "={{ $env.GSHEET_CRM_ID }}" },
+        "sheetName": "Leads",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "status": "={{ 'follow-up-' + $json.followup_nr }}",
+            "kontaktiert_am": "={{ $now.format('yyyy-MM-dd HH:mm') }}"
+          }
+        }
+      },
+      "id": "sheets-followup-status",
+      "name": "Status aktualisieren",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1320, 0],
+      "credentials": { "googleSheetsOAuth2Api": { "id": "google-cred", "name": "Google Sheets" } }
+    }
+  ],
+  "connections": {
+    "Täglich 10:00 Uhr": { "main": [[{ "node": "Alle Leads laden", "type": "main", "index": 0 }]] },
+    "Alle Leads laden": { "main": [[{ "node": "Nur kontaktierte Leads", "type": "main", "index": 0 }]] },
+    "Nur kontaktierte Leads": { "main": [[{ "node": "Follow-up fällig?", "type": "main", "index": 0 }]] },
+    "Follow-up fällig?": { "main": [[{ "node": "Claude: Follow-up schreiben", "type": "main", "index": 0 }]] },
+    "Claude: Follow-up schreiben": { "main": [[{ "node": "Follow-up senden", "type": "main", "index": 0 }]] },
+    "Follow-up senden": { "main": [[{ "node": "Status aktualisieren", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "active": false,
+  "tags": [{ "name": "Sales" }]
+}

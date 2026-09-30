@@ -1,0 +1,115 @@
+{
+  "name": "05 — Rechnungsstellung (monatlich 1.)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "cronExpression", "expression": "0 9 1 * *" }] }
+      },
+      "id": "schedule-5",
+      "name": "Monatlich am 1., 9:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "sheetId": { "mode": "list", "value": "={{ $env.GSHEET_CRM_ID }}" },
+        "sheetName": "Kunden",
+        "options": {}
+      },
+      "id": "sheets-kunden",
+      "name": "Aktive Kunden laden",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [220, 0],
+      "credentials": { "googleSheetsOAuth2Api": { "id": "google-cred", "name": "Google Sheets" } }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [{ "value1": "={{ $json.status }}", "value2": "aktiv" }]
+        }
+      },
+      "id": "filter-aktiv",
+      "name": "Nur aktive Kunden",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const kunden = $input.all();\nconst vormonat = new Date();\nvormonat.setMonth(vormonat.getMonth() - 1);\nconst monat = vormonat.toISOString().slice(0, 7);\n\nreturn kunden.map(k => ({\n  json: {\n    ...k.json,\n    abrechnungs_monat: monat,\n    belege_count: parseInt(k.json.belege_vormonat || '0'),\n    preis_pro_beleg: parseFloat(k.json.preis_pro_beleg || '0.15'),\n    monatspauschale: parseFloat(k.json.monatspauschale || '0'),\n    netto: Math.max(\n      parseFloat(k.json.monatspauschale || '0'),\n      parseInt(k.json.belege_vormonat || '0') * parseFloat(k.json.preis_pro_beleg || '0.15')\n    )\n  }\n}));"
+      },
+      "id": "code-berechnung",
+      "name": "Rechnungsbetrag berechnen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "model": "claude-sonnet-4-6",
+        "prompt": "Erstelle eine deutsche Rechnung als strukturiertes JSON.\n\nRechnungsdaten:\n- Kunde: {{ $json.firma }}\n- Adresse: {{ $json.adresse }}\n- Abrechnungsmonat: {{ $json.abrechnungs_monat }}\n- Belege verarbeitet: {{ $json.belege_count }}\n- Preis pro Beleg: {{ $json.preis_pro_beleg }} €\n- Monatspauschale: {{ $json.monatspauschale }} €\n- Nettobetrag: {{ $json.netto }} €\n- MwSt (19%): {{ ($json.netto * 0.19).toFixed(2) }} €\n- Bruttobetrag: {{ ($json.netto * 1.19).toFixed(2) }} €\n\nRechnungssteller: {{ $env.FIRMA_NAME }}, {{ $env.FIRMA_ADRESSE }}\nUSt-IdNr: {{ $env.FIRMA_UST_ID }}\nBankverbindung: {{ $env.FIRMA_IBAN }}\n\nAntworte als JSON:\n{\n  \"rechnungsnummer\": \"RE-{{ $now.format('yyyyMM') }}-{{ $json.kunden_id }}\",\n  \"betreff\": \"Rechnung FiBu-Agent {{ $json.abrechnungs_monat }}\",\n  \"email_text\": \"<höfliche E-Mail mit Rechnung im Anhang-Verweis>\",\n  \"positionen\": [{\"beschreibung\": \"...\", \"menge\": ..., \"einzelpreis\": ..., \"gesamt\": ...}],\n  \"netto\": ..., \"mwst\": ..., \"brutto\": ...\n}",
+        "options": { "maxTokens": 800, "temperature": 0.2 }
+      },
+      "id": "claude-rechnung",
+      "name": "Claude: Rechnung generieren",
+      "type": "@n8n/n8n-nodes-langchain.anthropicChat",
+      "typeVersion": 1,
+      "position": [880, 0],
+      "credentials": { "anthropicApi": { "id": "anthropic-cred", "name": "Anthropic" } }
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.SMTP_FROM }}",
+        "toEmail": "={{ $json.email }}",
+        "subject": "={{ $json.betreff }}",
+        "text": "={{ $json.email_text }}",
+        "options": {}
+      },
+      "id": "smtp-rechnung",
+      "name": "Rechnung per E-Mail",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1100, 0],
+      "credentials": { "smtp": { "id": "smtp-cred", "name": "SMTP" } }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "sheetId": { "mode": "list", "value": "={{ $env.GSHEET_CRM_ID }}" },
+        "sheetName": "Rechnungen",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "rechnungsnummer": "={{ $json.rechnungsnummer }}",
+            "kunde": "={{ $json.firma }}",
+            "monat": "={{ $json.abrechnungs_monat }}",
+            "netto": "={{ $json.netto }}",
+            "brutto": "={{ $json.brutto }}",
+            "status": "versendet",
+            "datum": "={{ $now.format('yyyy-MM-dd') }}"
+          }
+        }
+      },
+      "id": "sheets-rechnung-log",
+      "name": "Rechnung protokollieren",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1320, 0],
+      "credentials": { "googleSheetsOAuth2Api": { "id": "google-cred", "name": "Google Sheets" } }
+    }
+  ],
+  "connections": {
+    "Monatlich am 1., 9:00": { "main": [[{ "node": "Aktive Kunden laden", "type": "main", "index": 0 }]] },
+    "Aktive Kunden laden": { "main": [[{ "node": "Nur aktive Kunden", "type": "main", "index": 0 }]] },
+    "Nur aktive Kunden": { "main": [[{ "node": "Rechnungsbetrag berechnen", "type": "main", "index": 0 }]] },
+    "Rechnungsbetrag berechnen": { "main": [[{ "node": "Claude: Rechnung generieren", "type": "main", "index": 0 }]] },
+    "Claude: Rechnung generieren": { "main": [[{ "node": "Rechnung per E-Mail", "type": "main", "index": 0 }]] },
+    "Rechnung per E-Mail": { "main": [[{ "node": "Rechnung protokollieren", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "active": false,
+  "tags": [{ "name": "Finance" }]
+}

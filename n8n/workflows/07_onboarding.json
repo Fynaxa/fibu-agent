@@ -1,0 +1,121 @@
+{
+  "name": "07 — Kunden-Onboarding (Webhook)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "onboarding",
+        "options": {}
+      },
+      "id": "webhook-onboarding",
+      "name": "Neuer Kunde (Webhook)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "url": "http://fibu-agent:8080/admin/mandanten",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "action", "value": "create" },
+            { "name": "id", "value": "={{ $json.body.mandant_id }}" },
+            { "name": "name", "value": "={{ $json.body.firma }}" },
+            { "name": "kontenrahmen", "value": "={{ $json.body.kontenrahmen || 'SKR03' }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "create-mandant",
+      "name": "Mandant im FiBu-Agent anlegen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "sheetId": { "mode": "list", "value": "={{ $env.GSHEET_CRM_ID }}" },
+        "sheetName": "Kunden",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "kunden_id": "={{ $json.body.mandant_id }}",
+            "firma": "={{ $json.body.firma }}",
+            "email": "={{ $json.body.email }}",
+            "ansprechpartner": "={{ $json.body.ansprechpartner }}",
+            "adresse": "={{ $json.body.adresse }}",
+            "kontenrahmen": "={{ $json.body.kontenrahmen || 'SKR03' }}",
+            "preis_pro_beleg": "={{ $json.body.preis_pro_beleg || '0.15' }}",
+            "monatspauschale": "={{ $json.body.monatspauschale || '0' }}",
+            "status": "aktiv",
+            "onboarding_am": "={{ $now.format('yyyy-MM-dd') }}"
+          }
+        }
+      },
+      "id": "sheets-kunde-anlegen",
+      "name": "Kunde ins CRM",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [440, 0],
+      "credentials": { "googleSheetsOAuth2Api": { "id": "google-cred", "name": "Google Sheets" } }
+    },
+    {
+      "parameters": {
+        "model": "claude-sonnet-4-6",
+        "prompt": "Schreibe eine Willkommens-E-Mail für einen neuen Kunden unserer KI-Automatisierungsagentur.\n\nKunde: {{ $json.body.firma }}\nAnsprechpartner: {{ $json.body.ansprechpartner }}\nService: FiBu-Agent (automatische Belegverarbeitung)\n\nInhalt:\n- Herzliches Willkommen\n- Nächste Schritte (Belege hochladen, Pipeline testen)\n- Zugangsdaten-Hinweis (kommen in separater E-Mail)\n- Link zum Web-UI: {{ $env.FIBU_URL }}\n- Angebot eines 15-Min-Onboarding-Calls: {{ $env.CALENDLY_LINK }}\n- Support-Kontakt\n\nMax. 150 Wörter, Deutsch, Sie-Form, professionell+freundlich.\n\nAntworte als JSON:\n{\"betreff\": \"...\", \"email_text\": \"...\"}",
+        "options": { "maxTokens": 500, "temperature": 0.5 }
+      },
+      "id": "claude-willkommen",
+      "name": "Claude: Willkommens-Mail",
+      "type": "@n8n/n8n-nodes-langchain.anthropicChat",
+      "typeVersion": 1,
+      "position": [660, 0],
+      "credentials": { "anthropicApi": { "id": "anthropic-cred", "name": "Anthropic" } }
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.SMTP_FROM }}",
+        "toEmail": "={{ $json.body.email }}",
+        "subject": "={{ $json.betreff }}",
+        "text": "={{ $json.email_text }}",
+        "options": {}
+      },
+      "id": "smtp-willkommen",
+      "name": "Willkommens-Mail senden",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [880, 0],
+      "credentials": { "smtp": { "id": "smtp-cred", "name": "SMTP" } }
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.SMTP_FROM }}",
+        "toEmail": "={{ $env.ADMIN_EMAIL }}",
+        "subject": "={{ '🎉 Neuer Kunde: ' + $json.body.firma }}",
+        "text": "={{ 'Neuer Kunde ongeboardet:\\n\\nFirma: ' + $json.body.firma + '\\nAnsprechpartner: ' + $json.body.ansprechpartner + '\\nE-Mail: ' + $json.body.email + '\\nKontenrahmen: ' + ($json.body.kontenrahmen || 'SKR03') + '\\nMandant-ID: ' + $json.body.mandant_id }}",
+        "options": {}
+      },
+      "id": "smtp-admin-info",
+      "name": "Admin benachrichtigen",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [880, 200],
+      "credentials": { "smtp": { "id": "smtp-cred", "name": "SMTP" } }
+    }
+  ],
+  "connections": {
+    "Neuer Kunde (Webhook)": { "main": [[{ "node": "Mandant im FiBu-Agent anlegen", "type": "main", "index": 0 }]] },
+    "Mandant im FiBu-Agent anlegen": { "main": [[{ "node": "Kunde ins CRM", "type": "main", "index": 0 }]] },
+    "Kunde ins CRM": { "main": [[
+      { "node": "Claude: Willkommens-Mail", "type": "main", "index": 0 },
+      { "node": "Admin benachrichtigen", "type": "main", "index": 0 }
+    ]] },
+    "Claude: Willkommens-Mail": { "main": [[{ "node": "Willkommens-Mail senden", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "active": false,
+  "tags": [{ "name": "Onboarding" }]
+}

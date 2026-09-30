@@ -1,0 +1,124 @@
+{
+  "name": "06 — CEO-Tagesreport (täglich 7:00)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "hours", "hoursInterval": 24, "triggerAtHour": 7 }] }
+      },
+      "id": "schedule-6",
+      "name": "Täglich 7:00 Uhr",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "sheetId": { "mode": "list", "value": "={{ $env.GSHEET_CRM_ID }}" },
+        "sheetName": "Leads",
+        "options": {}
+      },
+      "id": "sheets-leads",
+      "name": "Leads laden",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [220, -100],
+      "credentials": { "googleSheetsOAuth2Api": { "id": "google-cred", "name": "Google Sheets" } }
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "sheetId": { "mode": "list", "value": "={{ $env.GSHEET_CRM_ID }}" },
+        "sheetName": "Kunden",
+        "options": {}
+      },
+      "id": "sheets-kunden",
+      "name": "Kunden laden",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [220, 100],
+      "credentials": { "googleSheetsOAuth2Api": { "id": "google-cred", "name": "Google Sheets" } }
+    },
+    {
+      "parameters": {
+        "url": "http://fibu-agent:8080/health",
+        "options": { "timeout": 5000 }
+      },
+      "id": "fibu-health",
+      "name": "FiBu-Agent Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "sheetId": { "mode": "list", "value": "={{ $env.GSHEET_CRM_ID }}" },
+        "sheetName": "Rechnungen",
+        "options": {}
+      },
+      "id": "sheets-rechnungen",
+      "name": "Rechnungen laden",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [220, 500],
+      "credentials": { "googleSheetsOAuth2Api": { "id": "google-cred", "name": "Google Sheets" } }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "mergeByPosition": true
+      },
+      "id": "merge-data",
+      "name": "Daten zusammenführen",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [500, 200]
+    },
+    {
+      "parameters": {
+        "model": "claude-sonnet-4-6",
+        "prompt": "Du bist der KI-CEO-Assistent einer Ein-Personen-Agentur für KI-Automatisierung.\n\nErstelle den Tagesreport für {{ $now.format('dd.MM.yyyy') }}.\n\nDaten:\n- Leads gesamt: {{ $json.leads_total }}\n- Neue Leads (letzte 24h): {{ $json.leads_neu }}\n- Leads kontaktiert: {{ $json.leads_kontaktiert }}\n- Aktive Kunden: {{ $json.kunden_aktiv }}\n- FiBu-Agent Status: {{ $json.fibu_healthy ? 'Gesund' : 'PROBLEM' }}\n- Offene Rechnungen: {{ $json.rechnungen_offen }}\n- Umsatz diesen Monat: {{ $json.umsatz_monat }} €\n\nErstelle:\n1. Eine Zusammenfassung in 3 Sätzen\n2. Die Top-3 Prioritäten für heute\n3. Warnungen (falls etwas kritisch ist)\n\nFormat: Klarer, knapper Text. Keine JSON-Antwort, sondern lesbarer Report.\nSprache: Deutsch.",
+        "options": { "maxTokens": 600, "temperature": 0.4 }
+      },
+      "id": "claude-report",
+      "name": "Claude: Tagesreport",
+      "type": "@n8n/n8n-nodes-langchain.anthropicChat",
+      "typeVersion": 1,
+      "position": [720, 200],
+      "credentials": { "anthropicApi": { "id": "anthropic-cred", "name": "Anthropic" } }
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.SMTP_FROM }}",
+        "toEmail": "={{ $env.ADMIN_EMAIL }}",
+        "subject": "={{ '📊 Tagesreport ' + $now.format('dd.MM.yyyy') }}",
+        "text": "={{ $json.report }}",
+        "options": {}
+      },
+      "id": "smtp-report",
+      "name": "Report per E-Mail",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [940, 200],
+      "credentials": { "smtp": { "id": "smtp-cred", "name": "SMTP" } }
+    }
+  ],
+  "connections": {
+    "Täglich 7:00 Uhr": {
+      "main": [[
+        { "node": "Leads laden", "type": "main", "index": 0 },
+        { "node": "Kunden laden", "type": "main", "index": 0 },
+        { "node": "FiBu-Agent Status", "type": "main", "index": 0 },
+        { "node": "Rechnungen laden", "type": "main", "index": 0 }
+      ]]
+    },
+    "Leads laden": { "main": [[{ "node": "Daten zusammenführen", "type": "main", "index": 0 }]] },
+    "Kunden laden": { "main": [[{ "node": "Daten zusammenführen", "type": "main", "index": 1 }]] },
+    "Daten zusammenführen": { "main": [[{ "node": "Claude: Tagesreport", "type": "main", "index": 0 }]] },
+    "Claude: Tagesreport": { "main": [[{ "node": "Report per E-Mail", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "active": false,
+  "tags": [{ "name": "Management" }]
+}

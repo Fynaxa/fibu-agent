@@ -1,0 +1,121 @@
+{
+  "name": "09 — Kontierungsregeln lernen (Webhook)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "kontierung-korrektur",
+        "options": {}
+      },
+      "id": "webhook-korrektur",
+      "name": "Korrektur-Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "model": "claude-sonnet-4-6",
+        "prompt": "Ein Benutzer hat eine Kontierung korrigiert. Analysiere, ob eine neue Regel erstellt werden sollte.\n\nBeleg-Daten:\n- Lieferant: {{ $json.body.lieferant }}\n- Buchungstext: {{ $json.body.buchungstext }}\n- Bisheriges Konto: {{ $json.body.altes_konto }}\n- Korrigiertes Konto: {{ $json.body.neues_konto }}\n- Kontenrahmen: {{ $json.body.kontenrahmen || 'SKR03' }}\n\nFrage: Sollte eine neue Kontierungsregel angelegt werden?\n\nRegeln für deine Entscheidung:\n- Ja, wenn der Lieferantenname spezifisch genug ist (kein generischer Name)\n- Ja, wenn das korrigierte Konto plausibel zur Branche/Lieferant passt\n- Nein, wenn es ein Einzelfall sein könnte (z.B. ungewöhnlicher Geschäftsvorfall)\n- Nein, wenn bereits eine passende Regel existieren könnte\n\nAntworte als JSON:\n{\n  \"neue_regel\": true/false,\n  \"pattern\": \"<suchtext für den Lieferanten, lowercase>\",\n  \"soll_konto\": \"<4-5 stellig>\",\n  \"haben_konto\": \"<4-5 stellig>\",\n  \"bu_schluessel\": \"<9 oder 8 oder leer>\",\n  \"beschreibung\": \"<was wird hier gebucht>\",\n  \"begruendung\": \"<warum Regel ja/nein>\"\n}",
+        "options": { "maxTokens": 400, "temperature": 0.1 }
+      },
+      "id": "claude-analyse",
+      "name": "Claude: Regel analysieren",
+      "type": "@n8n/n8n-nodes-langchain.anthropicChat",
+      "typeVersion": 1,
+      "position": [220, 0],
+      "credentials": { "anthropicApi": { "id": "anthropic-cred", "name": "Anthropic" } }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [{ "value1": "={{ $json.neue_regel }}", "value2": true }]
+        }
+      },
+      "id": "if-neue-regel",
+      "name": "Neue Regel?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "url": "http://fibu-agent:8080/api/kontierung-regel",
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ kontenrahmen: $json.kontenrahmen || 'SKR03', pattern: $json.pattern, soll_konto: $json.soll_konto, haben_konto: $json.haben_konto, bu_schluessel: $json.bu_schluessel, beschreibung: $json.beschreibung }) }}",
+        "options": {}
+      },
+      "id": "http-add-rule",
+      "name": "Regel zum FiBu-Agent hinzufügen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, -100]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "sheetId": { "mode": "list", "value": "={{ $env.GSHEET_CRM_ID }}" },
+        "sheetName": "Regel-Log",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "datum": "={{ $now.format('yyyy-MM-dd HH:mm') }}",
+            "lieferant": "={{ $json.body.lieferant }}",
+            "pattern": "={{ $json.pattern }}",
+            "altes_konto": "={{ $json.body.altes_konto }}",
+            "neues_konto": "={{ $json.neues_konto }}",
+            "status": "automatisch_hinzugefuegt",
+            "begruendung": "={{ $json.begruendung }}"
+          }
+        }
+      },
+      "id": "sheets-regel-log",
+      "name": "Regel protokollieren",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [880, -100],
+      "credentials": { "googleSheetsOAuth2Api": { "id": "google-cred", "name": "Google Sheets" } }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "sheetId": { "mode": "list", "value": "={{ $env.GSHEET_CRM_ID }}" },
+        "sheetName": "Regel-Log",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "datum": "={{ $now.format('yyyy-MM-dd HH:mm') }}",
+            "lieferant": "={{ $json.body.lieferant }}",
+            "pattern": "-",
+            "altes_konto": "={{ $json.body.altes_konto }}",
+            "neues_konto": "={{ $json.body.neues_konto }}",
+            "status": "abgelehnt_einzelfall",
+            "begruendung": "={{ $json.begruendung }}"
+          }
+        }
+      },
+      "id": "sheets-abgelehnt-log",
+      "name": "Ablehnung protokollieren",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [660, 100],
+      "credentials": { "googleSheetsOAuth2Api": { "id": "google-cred", "name": "Google Sheets" } }
+    }
+  ],
+  "connections": {
+    "Korrektur-Webhook": { "main": [[{ "node": "Claude: Regel analysieren", "type": "main", "index": 0 }]] },
+    "Claude: Regel analysieren": { "main": [[{ "node": "Neue Regel?", "type": "main", "index": 0 }]] },
+    "Neue Regel?": {
+      "main": [
+        [{ "node": "Regel zum FiBu-Agent hinzufügen", "type": "main", "index": 0 }],
+        [{ "node": "Ablehnung protokollieren", "type": "main", "index": 0 }]
+      ]
+    },
+    "Regel zum FiBu-Agent hinzufügen": { "main": [[{ "node": "Regel protokollieren", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "active": false,
+  "tags": [{ "name": "Delivery" }]
+}

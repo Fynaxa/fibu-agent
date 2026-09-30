@@ -1,0 +1,159 @@
+{
+  "name": "04 — FiBu-Pipeline Trigger (alle 30 Min)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "minutes", "minutesInterval": 30 }] }
+      },
+      "id": "schedule-4",
+      "name": "Alle 30 Minuten",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "url": "http://fibu-agent:8080/health",
+        "options": { "timeout": 5000 }
+      },
+      "id": "health-check",
+      "name": "FiBu-Agent Health Check",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [{ "value1": "={{ $json.healthy }}", "value2": true }]
+        }
+      },
+      "id": "if-healthy",
+      "name": "System gesund?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "url": "http://fibu-agent:8080/api/pipeline-status",
+        "options": { "timeout": 5000 }
+      },
+      "id": "get-status",
+      "name": "Pipeline-Status abfragen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, -100]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [{ "value1": "={{ $json.active.length }}", "value2": 0 }]
+        }
+      },
+      "id": "if-idle",
+      "name": "Pipeline frei?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [880, -100]
+    },
+    {
+      "parameters": {
+        "url": "http://fibu-agent:8080/run_pipeline",
+        "sendBody": true,
+        "bodyParameters": { "parameters": [{ "name": "mandant_id", "value": "" }] },
+        "options": { "timeout": 300000 },
+        "method": "POST"
+      },
+      "id": "run-pipeline",
+      "name": "Pipeline starten",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, -100]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Warte 60s, dann Status prüfen\nawait new Promise(r => setTimeout(r, 60000));\nreturn $input.all();"
+      },
+      "id": "wait-60s",
+      "name": "60s warten",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1320, -100]
+    },
+    {
+      "parameters": {
+        "url": "http://fibu-agent:8080/api/pipeline-status",
+        "options": {}
+      },
+      "id": "get-result",
+      "name": "Ergebnis abfragen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1540, -100]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "sheetId": { "mode": "list", "value": "={{ $env.GSHEET_CRM_ID }}" },
+        "sheetName": "Kunden",
+        "options": {}
+      },
+      "id": "sheets-kunden",
+      "name": "Kundenliste laden",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1760, -100],
+      "credentials": { "googleSheetsOAuth2Api": { "id": "google-cred", "name": "Google Sheets" } }
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.SMTP_FROM }}",
+        "toEmail": "={{ $json.email }}",
+        "subject": "FiBu-Agent: Neue Belege verarbeitet",
+        "text": "={{ 'Guten Tag,\\n\\nIhre Belege wurden verarbeitet.\\n\\n' + 'Verarbeitet: ' + $json.verarbeitet + '\\nExportiert: ' + $json.exportiert + '\\nRückfragen: ' + $json.rueckfragen + '\\n\\nBitte prüfen Sie offene Rückfragen im Web-UI.\\n\\nMit freundlichen Grüßen\\nIhr FiBu-Agent' }}",
+        "options": {}
+      },
+      "id": "smtp-kunde-info",
+      "name": "Kunde benachrichtigen",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1980, -100],
+      "credentials": { "smtp": { "id": "smtp-cred", "name": "SMTP" } }
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.SMTP_FROM }}",
+        "toEmail": "={{ $env.ADMIN_EMAIL }}",
+        "subject": "[ALERT] FiBu-Agent nicht erreichbar",
+        "text": "FiBu-Agent Health Check fehlgeschlagen.\n\nZeitpunkt: {{ $now.format('yyyy-MM-dd HH:mm') }}\nDetails: {{ JSON.stringify($json) }}\n\nBitte prüfen: docker compose logs fibu-agent",
+        "options": {}
+      },
+      "id": "smtp-alert",
+      "name": "Admin-Alert: System down",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [660, 100],
+      "credentials": { "smtp": { "id": "smtp-cred", "name": "SMTP" } }
+    }
+  ],
+  "connections": {
+    "Alle 30 Minuten": { "main": [[{ "node": "FiBu-Agent Health Check", "type": "main", "index": 0 }]] },
+    "FiBu-Agent Health Check": { "main": [[{ "node": "System gesund?", "type": "main", "index": 0 }]] },
+    "System gesund?": {
+      "main": [
+        [{ "node": "Pipeline-Status abfragen", "type": "main", "index": 0 }],
+        [{ "node": "Admin-Alert: System down", "type": "main", "index": 0 }]
+      ]
+    },
+    "Pipeline-Status abfragen": { "main": [[{ "node": "Pipeline frei?", "type": "main", "index": 0 }]] },
+    "Pipeline frei?": { "main": [[{ "node": "Pipeline starten", "type": "main", "index": 0 }], []] },
+    "Pipeline starten": { "main": [[{ "node": "60s warten", "type": "main", "index": 0 }]] },
+    "60s warten": { "main": [[{ "node": "Ergebnis abfragen", "type": "main", "index": 0 }]] },
+    "Ergebnis abfragen": { "main": [[{ "node": "Kundenliste laden", "type": "main", "index": 0 }]] },
+    "Kundenliste laden": { "main": [[{ "node": "Kunde benachrichtigen", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "active": false,
+  "tags": [{ "name": "Delivery" }]
+}

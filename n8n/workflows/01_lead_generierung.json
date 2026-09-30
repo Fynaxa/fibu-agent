@@ -1,0 +1,233 @@
+{
+  "name": "01 — Lead-Generierung (täglich)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "hours", "hoursInterval": 24, "triggerAtHour": 8 }]
+        }
+      },
+      "id": "schedule-1",
+      "name": "Täglich 8:00 Uhr",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "sheetId": { "mode": "list", "value": "={{ $env.GSHEET_CRM_ID }}" },
+        "sheetName": "Suchaufträge",
+        "options": {}
+      },
+      "id": "sheets-suchauftraege",
+      "name": "Suchaufträge laden",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [220, 0],
+      "credentials": { "googleSheetsOAuth2Api": { "id": "google-cred", "name": "Google Sheets" } }
+    },
+    {
+      "parameters": {
+        "url": "https://places.googleapis.com/v1/places:searchText",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "X-Goog-Api-Key", "value": "={{ $env.GOOGLE_PLACES_API_KEY }}" },
+            { "name": "X-Goog-FieldMask", "value": "places.displayName,places.formattedAddress,places.websiteUri,places.nationalPhoneNumber,places.businessStatus,places.types" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ textQuery: $json.suchbegriff + ' ' + $json.stadt, languageCode: 'de', regionCode: 'DE', maxResultCount: 20 }) }}",
+        "options": {}
+      },
+      "id": "places-search",
+      "name": "Google Places Suche",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "places",
+        "options": {}
+      },
+      "id": "split-places",
+      "name": "Ergebnisse aufteilen",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "url": "={{ 'https://api.hunter.io/v2/domain-search?domain=' + $json.websiteUri.replace('https://','').replace('http://','').split('/')[0] + '&api_key=' }}{{ $env.HUNTER_API_KEY }}",
+        "options": { "timeout": 10000 }
+      },
+      "id": "hunter-email",
+      "name": "Hunter.io E-Mail finden",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 0]
+    },
+    {
+      "parameters": {
+        "model": "claude-sonnet-4-6",
+        "prompt": "={{ $('Prompt: Lead bewerten').item.json.prompt }}",
+        "options": { "maxTokens": 500, "temperature": 0.3 }
+      },
+      "id": "claude-score",
+      "name": "Claude: Lead bewerten",
+      "type": "@n8n/n8n-nodes-langchain.anthropicChat",
+      "typeVersion": 1,
+      "position": [1100, 0],
+      "credentials": { "anthropicApi": { "id": "anthropic-cred", "name": "Anthropic" } }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [{ "value1": "={{ $json.score }}", "operation": "largerEqual", "value2": 60 }]
+        }
+      },
+      "id": "if-score",
+      "name": "Score ≥ 60?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1320, 0]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "sheetId": { "mode": "list", "value": "={{ $env.GSHEET_CRM_ID }}" },
+        "sheetName": "Leads",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "firma": "={{ $json.firma }}",
+            "website": "={{ $json.website }}",
+            "stadt": "={{ $json.stadt }}",
+            "email": "={{ $json.email }}",
+            "telefon": "={{ $json.telefon }}",
+            "score": "={{ $json.score }}",
+            "status": "neu",
+            "kontaktiert_am": "",
+            "quelle": "Google Places",
+            "erstellt_am": "={{ $now.format('yyyy-MM-dd') }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "sheets-lead-speichern",
+      "name": "Lead in CRM speichern",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1540, -100],
+      "credentials": { "googleSheetsOAuth2Api": { "id": "google-cred", "name": "Google Sheets" } }
+    },
+    {
+      "parameters": {
+        "model": "claude-sonnet-4-6",
+        "prompt": "={{ $('Prompt: Kaltakquise-Mail').item.json.prompt }}",
+        "options": { "maxTokens": 800, "temperature": 0.7 }
+      },
+      "id": "claude-email",
+      "name": "Claude: Kaltakquise-Mail",
+      "type": "@n8n/n8n-nodes-langchain.anthropicChat",
+      "typeVersion": 1,
+      "position": [1760, -100],
+      "credentials": { "anthropicApi": { "id": "anthropic-cred", "name": "Anthropic" } }
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.SMTP_FROM }}",
+        "toEmail": "={{ $json.email }}",
+        "subject": "={{ $json.betreff }}",
+        "text": "={{ $json.email_text }}",
+        "options": {}
+      },
+      "id": "smtp-send",
+      "name": "E-Mail senden",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1980, -100],
+      "credentials": { "smtp": { "id": "smtp-cred", "name": "SMTP" } }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "sheetId": { "mode": "list", "value": "={{ $env.GSHEET_CRM_ID }}" },
+        "sheetName": "Leads",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "status": "kontaktiert",
+            "kontaktiert_am": "={{ $now.format('yyyy-MM-dd HH:mm') }}"
+          }
+        },
+        "options": { "cellFormat": "USER_ENTERED" }
+      },
+      "id": "sheets-status-update",
+      "name": "Status → kontaktiert",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [2200, -100],
+      "credentials": { "googleSheetsOAuth2Api": { "id": "google-cred", "name": "Google Sheets" } }
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "prompt",
+              "value": "Du bist ein Lead-Scoring-Experte für KI-Automatisierungsagenturen im DACH-Raum.\n\nBewerte den folgenden Lead auf einer Skala von 0-100:\n\nFirma: {{ $json.displayName.text }}\nWebsite: {{ $json.websiteUri }}\nAdresse: {{ $json.formattedAddress }}\nBranche: {{ $json.types }}\nE-Mail gefunden: {{ $json.email || 'nein' }}\n\nScoring-Kriterien:\n- Tech-Stack/Cloud-Nutzung (30 Pkt): Nutzt SaaS, Cloud, moderne Tools?\n- Unternehmensgröße 20-200 MA (20 Pkt): Sweet Spot für Automatisierung\n- Automatisierungspotenzial (30 Pkt): Manuelle Prozesse erkennbar?\n- Digitalisierungs-Affinität (20 Pkt): Website modern, Content zu Innovation?\n\nAntworte NUR als JSON:\n{\"score\": <zahl>, \"begründung\": \"<1 Satz>\", \"branche\": \"<branche>\"}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "prompt-score",
+      "name": "Prompt: Lead bewerten",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [880, 200]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "prompt",
+              "value": "Du bist Vertriebsexperte einer KI-Automatisierungsagentur. Schreibe eine personalisierte Kaltakquise-E-Mail.\n\nEmpfänger:\n- Firma: {{ $json.firma }}\n- Branche: {{ $json.branche }}\n- Website: {{ $json.website }}\n- Stadt: {{ $json.stadt }}\n- Score-Begründung: {{ $json.begründung }}\n\nRegeln:\n- Maximal 150 Wörter\n- Persönlich, nicht generisch — beziehe dich auf die Firma\n- Ein konkretes Automatisierungsbeispiel für deren Branche\n- Call-to-Action: 15-Min-Gespräch vorschlagen\n- Professionell aber nicht steif\n- Deutsch, Du-Form vermeiden (Sie)\n- Kein Spam-Feeling, echten Mehrwert kommunizieren\n\nAntworte als JSON:\n{\"betreff\": \"<betreffzeile>\", \"email_text\": \"<vollständiger text>\"}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "prompt-email",
+      "name": "Prompt: Kaltakquise-Mail",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1540, 200]
+    }
+  ],
+  "connections": {
+    "Täglich 8:00 Uhr": { "main": [[{ "node": "Suchaufträge laden", "type": "main", "index": 0 }]] },
+    "Suchaufträge laden": { "main": [[{ "node": "Google Places Suche", "type": "main", "index": 0 }]] },
+    "Google Places Suche": { "main": [[{ "node": "Ergebnisse aufteilen", "type": "main", "index": 0 }]] },
+    "Ergebnisse aufteilen": { "main": [[{ "node": "Hunter.io E-Mail finden", "type": "main", "index": 0 }]] },
+    "Hunter.io E-Mail finden": { "main": [[{ "node": "Claude: Lead bewerten", "type": "main", "index": 0 }]] },
+    "Claude: Lead bewerten": { "main": [[{ "node": "Score ≥ 60?", "type": "main", "index": 0 }]] },
+    "Score ≥ 60?": {
+      "main": [
+        [{ "node": "Lead in CRM speichern", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "Lead in CRM speichern": { "main": [[{ "node": "Claude: Kaltakquise-Mail", "type": "main", "index": 0 }]] },
+    "Claude: Kaltakquise-Mail": { "main": [[{ "node": "E-Mail senden", "type": "main", "index": 0 }]] },
+    "E-Mail senden": { "main": [[{ "node": "Status → kontaktiert", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true, "callerPolicy": "workflowsFromSameOwner" },
+  "active": false,
+  "tags": [{ "name": "Lead-Generierung" }]
+}
