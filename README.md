@@ -23,7 +23,7 @@ Repository; die Commit-Historie hier beginnt mit der Veröffentlichung am
 | Tests | **31**, laufen offline ohne API-Zugang |
 | Kontierung | 4 Stufen: bestätigte Lieferanten aus dem Gedächtnis (ab zehn Bestätigungen ohne Rückfrage), dann 93 Regeln SKR03 bzw. 42 Regeln SKR04 (längstes Muster gewinnt), dann Sprachmodell, dann Rückfrage ab Konfidenz unter 0,7 |
 | Betrieb | Docker Compose mit nginx, Healthcheck, `restart: unless-stopped`, Tagesbudget für API-Kosten |
-| Orchestrierung | 14 n8n-Workflows mit 128 Knoten, als Export im Repository |
+| Orchestrierung | 8 n8n-Workflows mit 60 Knoten, als Export im Repository |
 | Abhängigkeiten | Flask, pdfplumber, anthropic, cryptography, bcrypt, flask-limiter, apscheduler |
 
 ![Übersicht: Lagezeile, offene Rückfragen, Pipeline-Start](docs/screenshots/uebersicht.png)
@@ -104,10 +104,10 @@ python -m pytest tests/         # 31 Tests, kein Netz nötig
 
 ## n8n
 
-`n8n/workflows/` enthält 14 exportierte Workflows, die den Dienst von außen
-orchestrieren: Pipeline-Trigger alle 30 Minuten, Kontierungsregeln lernen per
-Webhook, Uptime-Prüfung, nächtliche Sicherung, Mahnwesen, Onboarding,
-Monatsrechnung, Tagesreport. Die Exporte enthalten nur Credential-Namen, keine
+`n8n/workflows/` enthält 8 exportierte Workflows, die den Dienst von außen
+orchestrieren: Belegeingang per Mail, Pipeline-Trigger alle 30 Minuten,
+Kontierungsregeln lernen per Webhook, Uptime-Prüfung, nächtliche Sicherung,
+Mahnwesen, Onboarding, Monatsrechnung. Die Exporte enthalten nur Credential-Namen, keine
 Werte; die Anleitung zum Aufsetzen steht in `n8n/setup-anleitung.md`.
 
 ## Bewusst nicht gebaut

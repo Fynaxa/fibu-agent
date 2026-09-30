@@ -46,13 +46,6 @@ GSHEET_CRM_ID=1abc...xyz              # Sheet-ID aus der URL
 GOOGLE_PLACES_API_KEY=AIza...
 HUNTER_API_KEY=...
 
-# === Social Media (optional) ===
-LINKEDIN_ACCESS_TOKEN=...
-LINKEDIN_PERSON_ID=...
-INSTAGRAM_BUSINESS_ID=...
-INSTAGRAM_ACCESS_TOKEN=...
-X_BEARER_TOKEN=...
-
 # === Termine ===
 CALENDLY_LINK=https://calendly.com/dein-name/15min
 
@@ -123,19 +116,14 @@ In n8n → Settings → Credentials:
 
 In n8n → Workflows → Import from File:
 
-1. `01_lead_generierung.json`
-2. `02_email_eingang.json`
-3. `03_sales_followup.json`
-4. `04_fibu_pipeline.json`
-5. `05_rechnungsstellung.json`
-6. `06_ceo_report.json`
-7. `07_onboarding.json`
-8. `08_mahnwesen.json`
-9. `09_kontierung_lernen.json`
-10. `10_uptime_monitoring.json`
-11. `11_backup.json`
-12. `12_churn_praevention.json`
-13. `13_social_media_content.json`
+1. `02_email_eingang.json`
+2. `04_fibu_pipeline.json`
+3. `05_rechnungsstellung.json`
+4. `07_onboarding.json`
+5. `08_mahnwesen.json`
+6. `09_kontierung_lernen.json`
+7. `10_uptime_monitoring.json`
+8. `11_backup.json`
 
 ### 6.3 Credentials in Workflows zuordnen
 
@@ -152,7 +140,7 @@ Empfohlene Reihenfolge:
 | Phase | Workflows | Wann aktivieren |
 |---|---|---|
 | **Sofort** | 10 (Uptime), 11 (Backup) | Direkt nach Setup |
-| **Tag 1** | 06 (CEO-Report), 04 (FiBu-Pipeline) | Wenn FiBu-Agent läuft |
+| **Tag 1** | 04 (FiBu-Pipeline) | Wenn FiBu-Agent läuft |
 | **Tag 2** | 02 (E-Mail-Eingang), 01 (Lead-Gen) | Wenn E-Mail + Sheets funktionieren |
 | **Woche 1** | 03 (Follow-up), 07 (Onboarding) | Wenn erste Leads da sind |
 | **Woche 2** | 05 (Rechnung), 08 (Mahnwesen) | Wenn erste Kunden da sind |

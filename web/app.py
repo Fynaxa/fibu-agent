@@ -32,6 +32,25 @@ app = Flask(__name__,
             template_folder=str(Path(__file__).parent / "templates"),
             static_folder=str(Path(__file__).parent / "static"))
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", secrets.token_hex(32))
+# Cookies nur ueber HTTPS und ohne Cross-Site-Versand; lokal (http) per SESSION_COOKIE_SECURE=0 abschaltbar.
+app.config.update(
+    SESSION_COOKIE_SECURE=os.environ.get("SESSION_COOKIE_SECURE", "1") == "1",
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+)
+
+
+@app.after_request
+def _sicherheits_header(antwort):
+    """Kopfzeilen, die ein Browser braucht, um Einbettung und MIME-Raten zu unterbinden."""
+    antwort.headers.setdefault("X-Content-Type-Options", "nosniff")
+    antwort.headers.setdefault("X-Frame-Options", "DENY")
+    antwort.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    antwort.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+    if request.is_secure or request.headers.get("X-Forwarded-Proto") == "https":
+        antwort.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+    return antwort
+
 
 # CSRF-Schutz
 csrf = CSRFProtect(app)
